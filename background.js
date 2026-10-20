@@ -44,3 +44,68 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   })();
   return true;
 });
+
+// --- Panel: simgeye tıklayınca tam sayfa uygulamayı aç / öne getir ---
+chrome.action.onClicked.addListener(async () => {
+  const url = chrome.runtime.getURL("app.html");
+  const [existing] = await chrome.tabs.query({ url });
+  if (existing) {
+    await chrome.tabs.update(existing.id, { active: true });
+    await chrome.windows.update(existing.windowId, { focused: true });
+  } else {
+    await chrome.tabs.create({ url });
+  }
+});
+
+// --- Karşılaştırmayı başlat: kullanıcı adı verilirse profili arka plan sekmesinde açar ---
+const RESERVED = ["explore", "reels", "direct", "accounts", "p", "stories", "reel", "tv"];
+const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
+
+async function startCompare(rawName) {
+  const username = (rawName || "").trim().replace(/^@/, "");
+  let tab;
+  if (username) {
+    if (!/^[A-Za-z0-9._]{1,30}$/.test(username)) throw new Error("Geçersiz kullanıcı adı.");
+    tab = await chrome.tabs.create({ url: `https://www.instagram.com/${username}/`, active: false });
+    await chrome.storage.local.set({ tempTab: tab.id });
+    for (let i = 0; i < 40; i++) {
+      if ((await chrome.tabs.get(tab.id)).status === "complete") break;
+      await sleepMs(500);
+    }
+  } else {
+    const tabs = await chrome.tabs.query({ url: "https://www.instagram.com/*" });
+    tab = tabs.find((t) => {
+      const first = new URL(t.url).pathname.split("/").filter(Boolean)[0];
+      return first && !RESERVED.includes(first);
+    });
+    if (!tab) throw new Error("Açık bir Instagram profil sekmesi yok. Bir kullanıcı adı yazın.");
+  }
+  for (let i = 0; i < 20; i++) {
+    try {
+      await chrome.tabs.sendMessage(tab.id, { type: "compare" });
+      return;
+    } catch {
+      await sleepMs(500); // content script henüz hazır değil
+    }
+  }
+  throw new Error("Instagram sayfasına bağlanılamadı. Sayfayı yenileyip tekrar deneyin.");
+}
+
+chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
+  if (msg?.type !== "startCompare") return;
+  startCompare(msg.username)
+    .then(() => sendResponse({ ok: true }))
+    .catch((e) => sendResponse({ ok: false, error: e.message }));
+  return true;
+});
+
+// İş bitince (ya da hata verince) bizim açtığımız arka plan sekmesini kapat.
+chrome.storage.onChanged.addListener(async (changes) => {
+  const phase = changes.state?.newValue?.phase;
+  if (phase !== "done" && phase !== "error") return;
+  const { tempTab } = await chrome.storage.local.get("tempTab");
+  if (tempTab) {
+    chrome.tabs.remove(tempTab).catch(() => {});
+    chrome.storage.local.remove("tempTab");
+  }
+});

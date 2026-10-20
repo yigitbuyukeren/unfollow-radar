@@ -13,7 +13,7 @@
     "http://127.0.0.1:8765/*"
   ],
   "action": {
-    "default_popup": "popup.html"
+    "default_title": "Takip Analizi"
   },
   "content_scripts": [
     {

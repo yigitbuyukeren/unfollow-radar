@@ -62,7 +62,14 @@ async function fetchAll(userId, kind, label) {
   do {
     const q = `count=${PAGE_SIZE}${maxId ? `&max_id=${encodeURIComponent(maxId)}` : ""}`;
     const data = await withBackoff(() => igGet(`/api/v1/friendships/${userId}/${kind}/?${q}`), label);
-    for (const u of data.users || []) users.set(u.pk || u.id, { pk: String(u.pk || u.id), username: u.username, fullName: u.full_name });
+    for (const u of data.users || []) users.set(u.pk || u.id, {
+      pk: String(u.pk || u.id),
+      username: u.username,
+      fullName: u.full_name,
+      pic: u.profile_pic_url,
+      verified: !!u.is_verified,
+      isPrivate: !!u.is_private,
+    });
     maxId = data.next_max_id || "";
     await setState({ phase: "running", text: `${label} alınıyor… ${users.size}` });
     if (maxId) await sleep(2000 + Math.random() * 2000);
