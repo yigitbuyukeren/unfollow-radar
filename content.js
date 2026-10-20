@@ -93,39 +93,6 @@ async function compare() {
   };
 }
 
-const csrfToken = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
-
-async function igPost(path) {
-  const res = await fetch(`https://www.instagram.com${path}`, {
-    method: "POST",
-    credentials: "include",
-    headers: {
-      "x-ig-app-id": IG_APP_ID,
-      "x-asbd-id": "129477",
-      "x-ig-www-claim": sessionStorage.getItem("www-claim-v2") || "0",
-      "x-instagram-ajax": "1",
-      "x-csrftoken": csrfToken(),
-      "x-requested-with": "XMLHttpRequest",
-      "content-type": "application/x-www-form-urlencoded",
-    },
-    body: "",
-  });
-  const text = await res.text();
-  let data = {};
-  try {
-    data = JSON.parse(text);
-  } catch {}
-  if (res.status === 429) throw new Error("Instagram istek sınırı (429). Biraz bekleyin.");
-  if (!res.ok || (data.status && data.status !== "ok")) {
-    throw new Error(`İşlem başarısız (${res.status}): ${data.message || text.slice(0, 120)}`);
-  }
-  if (data.friendship_status && data.friendship_status.following === true && path.includes("/destroy/")) {
-    throw new Error("Instagram işlemi uygulamadı (hâlâ takip ediliyor).");
-  }
-}
-
-const ACTIONS = { unfollow: "destroy", removeFollower: "remove_follower" };
-
 let running = false;
 async function run() {
   if (running) return;
@@ -144,11 +111,6 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "compare") {
     run();
     sendResponse({ ok: true });
-  } else if (msg?.type === "action" && ACTIONS[msg.action] && /^\d+$/.test(msg.pk)) {
-    igPost(`/api/v1/friendships/${ACTIONS[msg.action]}/${msg.pk}/`)
-      .then(() => sendResponse({ ok: true }))
-      .catch((e) => sendResponse({ ok: false, error: e.message }));
-    return true; // async yanıt
   }
 });
 
@@ -156,3 +118,40 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
 chrome.storage.local.get("state").then(({ state }) => {
   if (state && (state.phase === "running" || state.phase === "waiting")) setState({ phase: "idle" });
 });
+
+// --- Takipten çıkar: arka planda açılan profil sekmesinde Instagram arayüzünü kullanır ---
+const textOf = (el) => (el.textContent || "").trim();
+const findButton = (re) => [...document.querySelectorAll("button, [role=button]")].find((el) => re.test(textOf(el)));
+
+async function waitFor(fn, ms = 8000) {
+  const end = Date.now() + ms;
+  while (Date.now() < end) {
+    const el = fn();
+    if (el) return el;
+    await sleep(250);
+  }
+  return null;
+}
+
+async function unfollowViaUi() {
+  const FOLLOWING = /^(Takiptesin|Takip ediliyor|Following|Requested|İstek gönderildi)/i;
+  const UNFOLLOW = /^(Takibi bırak|Unfollow)$/i;
+  const FOLLOW = /^(Takip et|Follow)$/i;
+  try {
+    const btn = await waitFor(() => findButton(FOLLOWING));
+    if (!btn) throw new Error("Takip düğmesi bulunamadı (zaten takip etmiyor olabilirsiniz).");
+    btn.click();
+    const item = await waitFor(() => findButton(UNFOLLOW));
+    if (!item) throw new Error("'Takibi bırak' seçeneği bulunamadı.");
+    item.click();
+    await sleep(1200);
+    const confirm = findButton(UNFOLLOW); // bazı hesaplarda onay penceresi çıkar
+    if (confirm) confirm.click();
+    if (!(await waitFor(() => findButton(FOLLOW)))) throw new Error("Takipten çıkma doğrulanamadı.");
+    chrome.runtime.sendMessage({ type: "unfollowResult", ok: true });
+  } catch (e) {
+    chrome.runtime.sendMessage({ type: "unfollowResult", ok: false, error: e.message });
+  }
+}
+
+if (location.hash === "#ift-unfollow") unfollowViaUi();

@@ -4,30 +4,23 @@ let activeTab = "notFollowingBack";
 
 const ACTION_FOR_TAB = {
   notFollowingBack: { type: "unfollow", label: "Takipten çık" },
-  notFollowedBack: { type: "removeFollower", label: "Takipçiden çıkar" },
 };
 
 async function runAction(user, action, btn) {
   btn.disabled = true;
   btn.textContent = "…";
   try {
-    const [tab] = await chrome.tabs.query({ active: true, currentWindow: true });
-    const res = await chrome.tabs.sendMessage(tab.id, { type: "action", action: action.type, pk: user.pk });
+    const res = await chrome.runtime.sendMessage({ type: "unfollowUI", username: user.username });
     if (!res?.ok) throw new Error(res?.error || "Bilinmeyen hata");
     // Listeden düşür ve kalıcı durumu güncelle.
     const drop = (list) => list.filter((x) => x.pk !== user.pk);
-    if (action.type === "unfollow") {
-      result.notFollowingBack = drop(result.notFollowingBack);
-      result.followingCount--;
-    } else {
-      result.notFollowedBack = drop(result.notFollowedBack);
-      result.followerCount--;
-    }
+    result.notFollowingBack = drop(result.notFollowingBack);
+    result.followingCount--;
     await chrome.storage.local.set({ state: { phase: "done", result } });
   } catch (e) {
     btn.disabled = false;
     btn.textContent = action.label;
-    $("status").textContent = e.message.includes("Receiving end") ? "Instagram sayfasını yenileyip tekrar deneyin." : e.message;
+    $("status").textContent = e.message;
   }
 }
 
