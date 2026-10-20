@@ -10,3 +10,6 @@ button { cursor: pointer; }
 #list li { padding: 4px 0; border-bottom: 1px solid #eee; }
 #list a { color: #0a58ca; text-decoration: none; }
 #list small { color: #777; margin-left: 6px; }
+[hidden] { display: none !important; }
+details { margin: 8px 0; font-size: 12px; }
+.hint { color: #555; margin: 6px 0; }

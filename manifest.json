@@ -5,7 +5,8 @@
   "description": "Açık profilin takip ettikleri ile takipçilerini karşılaştırır.",
   "permissions": [
     "activeTab",
-    "alarms"
+    "alarms",
+    "storage"
   ],
   "host_permissions": [
     "https://www.instagram.com/*",
