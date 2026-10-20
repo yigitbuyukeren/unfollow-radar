@@ -1,34 +1,23 @@
-// Yayın paketini üretir: dev reload kodunu ve yerel izinleri çıkarır, zip'ler.
+// src/ altındaki dosyaları tek bir konsol betiğinde birleştirir: unfollow-radar.js
 const fs = require("fs");
 const path = require("path");
-const cp = require("child_process");
 
 const root = path.join(__dirname, "..");
-const out = path.join(root, "dist");
-const FILES = ["background.js", "content.js", "shared.js", "i18n.js", "scan-core.js", "queue-core.js", "panel.js", "app.js", "app-extension.js", "app.html", "app.css"];
+const read = (f) => fs.readFileSync(path.join(root, f), "utf8");
+const pkg = JSON.parse(read("package.json"));
+const css = read("src/app.css");
+const logo = "data:image/png;base64," + fs.readFileSync(path.join(root, "icons/icon48.png")).toString("base64");
 
-fs.rmSync(out, { recursive: true, force: true });
-fs.mkdirSync(out);
-for (const f of FILES) fs.copyFileSync(path.join(root, f), path.join(out, f));
-fs.cpSync(path.join(root, "icons"), path.join(out, "icons"), { recursive: true });
-fs.cpSync(path.join(root, "_locales"), path.join(out, "_locales"), { recursive: true });
-
-const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
-manifest.host_permissions = manifest.host_permissions.filter((h) => !h.includes("127.0.0.1"));
-fs.writeFileSync(path.join(out, "manifest.json"), JSON.stringify(manifest, null, 2));
-
-const bgPath = path.join(out, "background.js");
-fs.writeFileSync(bgPath, fs.readFileSync(bgPath, "utf8").replace(/\/\/ <dev-reload>[\s\S]*?\/\/ <\/dev-reload>\n?/, ""));
-
-// Güvenlik ağı: dev kalıntısı kalmamalı.
-for (const f of fs.readdirSync(out)) {
-  if (fs.statSync(path.join(out, f)).isFile() && /127\.0\.0\.1|dev-reload/.test(fs.readFileSync(path.join(out, f), "utf8"))) {
-    console.error(`Dev kalıntısı bulundu: ${f}`);
-    process.exit(1);
-  }
-}
-
-const zip = path.join(root, `unfollow-radar-${manifest.version}.zip`);
-fs.rmSync(zip, { force: true });
-cp.execFileSync("zip", ["-qr", zip, "."], { cwd: out });
-console.log(`Hazır: ${path.basename(zip)}`);
+const parts = ["shared", "i18n", "shim", "scan-core", "queue-core", "panel", "app", "unfollow-api", "entry"].map((n) => `src/${n}.js`);
+const header = `/*!
+ * Unfollow Radar v${pkg.version} (MIT)
+ * EN: Open https://www.instagram.com while signed in, open DevTools (F12) → Console, paste this whole file, press Enter.
+ * TR: Giriş yapmış hâlde https://www.instagram.com'u aç, DevTools (F12) → Console'a bu dosyanın tamamını yapıştır, Enter'a bas.
+ * Not affiliated with Instagram/Meta. Everything runs locally in your browser; nothing is sent anywhere. Use at your own risk.
+ * https://github.com/yigitbuyukeren/unfollow-radar
+ */
+`;
+const body = parts.map((p) => `// ---- ${p} ----\n${read(p)}`).join("\n").replace("__BUILD_ID__", `${pkg.version}-${Date.now()}`);
+const out = `${header}(() => {\nconst APP_CSS = ${JSON.stringify(css)};\nconst LOGO = ${JSON.stringify(logo)};\n${body}\n})();\n`;
+fs.writeFileSync(path.join(root, "unfollow-radar.js"), out);
+console.log(`unfollow-radar.js (${(out.length / 1024).toFixed(0)} KB)`);

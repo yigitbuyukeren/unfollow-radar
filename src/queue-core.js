@@ -1,5 +1,5 @@
-// Takipten çıkarma kuyruğu ve günlük limitler: uzantı arka planı ve konsol sürümü ortak kullanır.
-// Gerektirenler (global): store {get,set}, host {unfollow(username), follow(username), schedule(when)},
+// Takipten çıkarma kuyruğu ve günlük limitler.
+// Gerektirenler (global): store {get,set}, host {unfollow(username), schedule(when)},
 // LIMITS, isToday, randomGap, tx.
 const QUEUE = "queue";
 const USERNAME_RE = /^[A-Za-z0-9._]{1,30}$/;
@@ -105,13 +105,4 @@ async function queueControl(op) {
   else if (op === "clear") return store.set({ [QUEUE]: emptyQueue() });
   await store.set({ [QUEUE]: q });
   if (op === "resume") pump();
-}
-
-async function follow(username) {
-  const res = await host.follow(username);
-  if (res.ok) {
-    const { history = [] } = await store.get("history");
-    await store.set({ history: history.filter((h) => h.username !== username) });
-  }
-  return res;
 }

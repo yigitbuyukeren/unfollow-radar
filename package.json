@@ -3,8 +3,6 @@
   "version": "1.0.0",
   "private": true,
   "scripts": {
-    "dev": "node dev/server.js",
-    "build": "node scripts/build.js && node scripts/build-console.js",
-    "build:console": "node scripts/build-console.js"
+    "build": "node scripts/build.js"
   }
 }

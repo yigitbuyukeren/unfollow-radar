@@ -1,5 +1,4 @@
-// Panel mantığı: uzantı sayfası ve konsol sürümü ortak kullanır.
-// host = { chrome, mode: "extension" | "console", logoSrc, reload(), open(url) }
+// Panel mantığı. host = { chrome, logoSrc, reload(), open(url) }
 async function mountApp(document, host) {
   const chrome = host.chrome;
   const win = document.defaultView;
@@ -25,13 +24,11 @@ async function mountApp(document, host) {
     { rootMargin: "200px" }
   );
 
-  // Resmi yükler; biri başarısız olursa diğer yolu dener:
-  // uzantı: önce indir (host izni) → olmazsa doğrudan; konsol: önce doğrudan (sayfanın kendi kaynağıyla) → olmazsa indir.
-  const loadImg = (src, noReferrer) =>
+  // Resmi yükler: önce doğrudan (sayfanın kendi kaynağıyla), olmazsa indirip blob olarak dener.
+  const loadImg = (src) =>
     new Promise((resolve, reject) => {
       const img = document.createElement("img");
       img.alt = "";
-      if (noReferrer) img.referrerPolicy = "no-referrer";
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("img"));
       img.src = src;
@@ -44,12 +41,10 @@ async function mountApp(document, host) {
     }
     return loadImg(picCache.get(url));
   };
-  const direct = (url) => loadImg(url, host.mode === "extension");
 
   async function loadPic(el) {
     const url = el.dataset.pic;
-    const order = host.mode === "extension" ? [viaFetch, direct] : [direct, viaFetch];
-    for (const attempt of order) {
+    for (const attempt of [loadImg, viaFetch]) {
       try {
         el.replaceChildren(await attempt(url));
         return;
@@ -176,8 +171,7 @@ async function mountApp(document, host) {
     } else if (activeTab === "whitelist") {
       actions.append(button(tx("unprotect"), "ghost small", () => unprotect(u)));
     } else if (activeTab === "history") {
-      if (host.mode === "console") actions.append(button(tx("openProfile"), "ghost small", () => host.open(`https://www.instagram.com/${u.username}/`)));
-      else actions.append(button(tx("refollow"), "ghost small", (b) => refollow(u, b)));
+      actions.append(button(tx("openProfile"), "ghost small", () => host.open(`https://www.instagram.com/${u.username}/`)));
     }
     li.append(actions);
     return li;
@@ -297,18 +291,6 @@ async function mountApp(document, host) {
     });
   };
   const unprotect = (u) => chrome.storage.local.set({ whitelist: S.whitelist.filter((w) => w.username !== u.username) });
-
-  async function refollow(entry, btn) {
-    btn.disabled = true;
-    btn.textContent = "…";
-    setError("");
-    const res = await send({ type: "follow", username: entry.username });
-    if (!res?.ok) {
-      btn.disabled = false;
-      btn.textContent = tx("refollow");
-      setError(res?.error || tx("followFail"));
-    }
-  }
 
   // ---------- beyaz liste: dışa / içe aktarma, toplu ekleme ----------
   const VALID_NAME = /^[A-Za-z0-9._]{1,30}$/;

@@ -4,8 +4,8 @@
 
 # Unfollow Radar
 
-**EN** · Find who doesn't follow you back on Instagram — and unfollow them slowly and safely.
-**TR** · Instagram'da seni geri takip etmeyenleri bul ve yavaş, güvenli şekilde yönet.
+**EN** · Find who doesn't follow you back on Instagram — paste one file into the browser console, no install.
+**TR** · Instagram'da seni geri takip etmeyenleri bul — tek dosyayı tarayıcı konsoluna yapıştır, kurulum yok.
 
 [English](#english) · [Türkçe](#türkçe)
 
@@ -15,22 +15,24 @@
 
 ## English
 
-Unfollow Radar scans **your own** Instagram account and shows who you follow that doesn't follow you back, who follows you that you don't follow back, and your mutuals. It ships in two forms that share the same code:
+Unfollow Radar scans **your own** Instagram account and shows who you follow that doesn't follow you back, who follows you that you don't follow back, and your mutuals. It's a single JavaScript file you paste into the console while on instagram.com. Nothing to install.
 
-| | Browser extension | Console edition |
-|---|---|---|
-| Install | Load unpacked (Chrome, Dia, Edge, Brave…) | Nothing — paste one file |
-| Runs in background | Yes | No, the tab must stay open |
-| Unfollow method | Drives Instagram's own UI in a background tab | Instagram's web request (GraphQL) |
-| Follow back (undo) | Yes | No (opens the profile) |
+### How to use
+1. Open <https://www.instagram.com> and sign in.
+2. Open DevTools (**F12**, or `Cmd+Option+J` on Mac) → **Console**. Chrome asks you to type `allow pasting` once.
+3. Open [`unfollow-radar.js`](unfollow-radar.js) (click **Raw** → select all → copy), paste it into the console and press **Enter**.
+4. The panel opens over the page. Press **Scan my account**.
+
+To use it again, paste the file again (or reload the page first if you pasted an older version).
+
+> ⚠️ Only paste code you have read and trust. Meta warns about this for good reason. The file is plain, readable JavaScript — the readable sources are in [`src/`](src).
 
 ### Features
-- Scans your account automatically (whoever is signed in) — max **3 scans/day**
-- Lists: not following back · I don't follow back · mutual, with profile pictures, search, verified/private badges
+- Scans whichever account is signed in — max **3 scans/day**
+- Lists: not following back · I don't follow back · mutual, with profile pictures, search and verified/private badges
 - **Slow bulk unfollow** queue with pause / resume / cancel — max **30 people/day**
 - **Protected list** (allow-list): export / import JSON, bulk add by pasting names or links
-- **Undo**: follow back someone you removed (extension)
-- Turkish and English UI (switch with the button in the corner)
+- Turkish and English UI (button in the corner)
 - 100% local: no server, no account, no analytics
 
 ### How it protects your account
@@ -40,35 +42,23 @@ Waits and retry rules follow the defaults of [InstagramUnfollowers](https://gith
 - Scan: 300–999 ms + 1–1.3 s between pages, a 10 s ± 5 s pause every 15 requests, max 250 pages per list
 - Retries: up to 3; 429 / `feedback_required` wait 30 × attempt seconds, network errors 5 × attempt seconds
 
-On top of that, this project:
-- stops the queue immediately when Instagram shows an **action block** / `feedback_required`, or after **2 failed actions in a row**
-- **locks unfollowing** when the scan looks incomplete (counts don't match what Instagram reports), so the wrong people are never removed
-- **resumes** an interrupted scan where it left off (cached for 6 hours)
-- counts a daily scan only when it **succeeds**
+On top of that:
+- the queue **stops immediately** when Instagram reports an action block / `feedback_required`, or after **2 failed actions in a row**
+- unfollowing is **locked** when the scan looks incomplete (counts don't match what Instagram reports), so the wrong people are never removed
+- an interrupted scan **resumes** where it left off (cached for 6 hours)
+- a daily scan is counted only when it **succeeds**
+- the page warns before you leave while a queue is running
 
-All numbers live in one place: [`shared.js`](shared.js).
+All numbers live in one place: [`src/shared.js`](src/shared.js).
 
-### Install — browser extension
-1. Download the latest zip from the **Releases** page (or run `npm run build` and use `dist/`), unzip it.
-2. Open `chrome://extensions`, turn on **Developer mode**, click **Load unpacked**, pick the folder.
-3. Sign in at instagram.com, click the extension icon, press **Scan my account**.
-
-### Install — console edition
-1. Open <https://www.instagram.com> while signed in.
-2. Open DevTools (**F12**) → **Console**. (Chrome asks you to type `allow pasting` once.)
-3. Open [`console/unfollow-radar.console.js`](console/unfollow-radar.console.js), copy **the whole file**, paste into the console, press Enter.
-
-> ⚠️ Only paste code you have read and trust. Meta warns about this for good reason. The file is plain, readable JavaScript.
+### Privacy
+Everything runs in your browser. Results, the protected list and history are stored in the page's `localStorage` (keys start with `unfollowRadar:`). Nothing is sent anywhere. "Delete all my data" in the panel removes it all.
 
 ### Development
 ```bash
-npm run dev      # watches files and live-reloads the extension
-npm run build    # extension zip + console bundle
+npm run build    # bundles src/*.js into unfollow-radar.js
 ```
-Layout: `shared.js` (limits) · `i18n.js` (strings) · `scan-core.js` · `queue-core.js` · `panel.js` + `app.js` (UI, shared) · `content.js` / `background.js` (extension) · `console-src/` (console edition).
-
-### Privacy
-Nothing leaves your browser. See [PRIVACY.md](PRIVACY.md).
+Layout: `shared.js` (limits) · `i18n.js` (TR/EN strings) · `shim.js` (storage) · `scan-core.js` · `queue-core.js` · `panel.js` + `app.js` (UI) · `unfollow-api.js` (unfollow request) · `entry.js` (startup).
 
 ### ⚠️ Disclaimer
 Not affiliated with, authorized or endorsed by Instagram or Meta. Automating Instagram may violate its Terms of Use and can get an account restricted. The tool relies on unofficial web endpoints that may change at any time. **Use at your own risk.**
@@ -77,22 +67,24 @@ Not affiliated with, authorized or endorsed by Instagram or Meta. Automating Ins
 
 ## Türkçe
 
-Unfollow Radar **kendi** Instagram hesabını tarar; seni geri takip etmeyenleri, senin geri takip etmediklerini ve karşılıklı takipleştiklerini gösterir. Aynı kodu paylaşan iki sürümü var:
+Unfollow Radar **kendi** Instagram hesabını tarar; seni geri takip etmeyenleri, senin geri takip etmediklerini ve karşılıklı takipleştiklerini gösterir. instagram.com'dayken konsola yapıştırdığın tek bir JavaScript dosyasıdır. Kurulum yok.
 
-| | Tarayıcı uzantısı | Konsol sürümü |
-|---|---|---|
-| Kurulum | "Paketlenmemiş öğe yükle" (Chrome, Dia, Edge, Brave…) | Kurulum yok — tek dosyayı yapıştır |
-| Arka planda çalışır | Evet | Hayır, sekme açık kalmalı |
-| Takipten çıkarma | Instagram arayüzünü arka plan sekmesinde sürer | Instagram'ın web isteği (GraphQL) |
-| Geri takip (geri alma) | Var | Yok (profili açar) |
+### Nasıl kullanılır
+1. <https://www.instagram.com> adresini aç ve giriş yap.
+2. DevTools'u aç (**F12**, Mac'te `Cmd+Option+J`) → **Console**. Chrome bir kez `allow pasting` yazmanı ister.
+3. [`unfollow-radar.js`](unfollow-radar.js) dosyasını aç (**Raw** → hepsini seç → kopyala), konsola yapıştır, **Enter**'a bas.
+4. Panel sayfanın üstünde açılır. **Hesabımı tara**'ya bas.
+
+Tekrar kullanmak için dosyayı yine yapıştır (eski sürümü yapıştırdıysan önce sayfayı yenile).
+
+> ⚠️ Yalnızca okuyup güvendiğin kodu yapıştır. Meta bu konuda uyarır, haklı olarak. Dosya düz, okunabilir JavaScript'tir; okunabilir kaynaklar [`src/`](src) klasöründe.
 
 ### Özellikler
-- Giriş yapılan hesabı otomatik tarar — günde en fazla **3 tarama**
+- Giriş yapılan hesabı tarar — günde en fazla **3 tarama**
 - Listeler: geri takip etmeyenler · takip etmediklerim · karşılıklı; profil resmi, arama, doğrulanmış/gizli işareti
 - **Yavaş toplu takipten çıkarma** kuyruğu (durdur / devam / iptal) — günde en fazla **30 kişi**
 - **Korunanlar listesi:** JSON dışa/içe aktarma, isim ya da bağlantı yapıştırarak toplu ekleme
-- **Geri alma:** çıkardığın birini tekrar takip et (uzantı)
-- Türkçe ve İngilizce arayüz (köşedeki düğmeyle değişir)
+- Türkçe ve İngilizce arayüz (köşedeki düğme)
 - %100 yerel: sunucu yok, hesap yok, analitik yok
 
 ### Hesabını nasıl korur
@@ -102,34 +94,22 @@ Bekleme ve yeniden deneme kuralları [InstagramUnfollowers](https://github.com/d
 - Tarama: sayfa arası 300–999 ms + 1–1,3 sn, her 15 istekte 10 sn ± 5 sn uzun uyku, liste başına en fazla 250 sayfa
 - Yeniden deneme: en fazla 3; 429 / `feedback_required` için 30 × deneme sn, ağ hatası için 5 × deneme sn
 
-Bunlara ek olarak bu proje:
-- Instagram **işlem engeli** / `feedback_required` gösterirse ya da **üst üste 2 işlem** başarısız olursa kuyruğu hemen durdurur
-- Tarama eksik görünürse (sayılar Instagram'ın bildirdiğiyle uyuşmuyorsa) **çıkarmayı kilitler**; yanlış kişi asla çıkarılmaz
-- Yarım kalan taramayı kaldığı yerden **sürdürür** (6 saat önbellek)
-- Günlük tarama hakkını yalnızca **başarılı** taramada düşer
+Bunlara ek olarak:
+- Instagram işlem engeli / `feedback_required` bildirirse ya da **üst üste 2 işlem** başarısız olursa kuyruk **hemen durur**
+- Tarama eksik görünürse (sayılar Instagram'ın bildirdiğiyle uyuşmuyorsa) çıkarma **kilitlenir**; yanlış kişi asla çıkarılmaz
+- Yarım kalan tarama kaldığı yerden **sürer** (6 saat önbellek)
+- Günlük tarama hakkı yalnızca **başarılı** taramada düşer
+- Kuyruk çalışırken sayfadan ayrılırken uyarır
 
-Tüm sayılar tek yerde: [`shared.js`](shared.js).
+Tüm sayılar tek yerde: [`src/shared.js`](src/shared.js).
 
-### Kurulum — tarayıcı uzantısı
-1. **Releases** sayfasından son zip'i indir (ya da `npm run build` çalıştırıp `dist/` klasörünü kullan), aç.
-2. `chrome://extensions` → **Geliştirici modu**nu aç → **Paketlenmemiş öğe yükle** → klasörü seç.
-3. instagram.com'da giriş yap, uzantı simgesine tıkla, **Hesabımı tara**'ya bas.
-
-### Kurulum — konsol sürümü
-1. Giriş yapmış hâlde <https://www.instagram.com> adresini aç.
-2. DevTools'u aç (**F12**) → **Console**. (Chrome bir kez `allow pasting` yazmanı ister.)
-3. [`console/unfollow-radar.console.js`](console/unfollow-radar.console.js) dosyasının **tamamını** kopyalayıp konsola yapıştır, Enter'a bas.
-
-> ⚠️ Yalnızca okuyup güvendiğin kodu yapıştır. Meta bu konuda uyarır, haklı olarak. Dosya düz, okunabilir JavaScript'tir.
+### Gizlilik
+Her şey tarayıcında çalışır. Sonuçlar, korunanlar ve geçmiş sayfanın `localStorage` alanında saklanır (anahtarlar `unfollowRadar:` ile başlar). Hiçbir yere gönderilmez. Paneldeki "Tüm verilerimi sil" hepsini kaldırır.
 
 ### Geliştirme
 ```bash
-npm run dev      # dosyaları izler, uzantıyı canlı yeniler
-npm run build    # uzantı zip'i + konsol paketi
+npm run build    # src/*.js dosyalarını unfollow-radar.js içinde birleştirir
 ```
-
-### Gizlilik
-Hiçbir şey tarayıcından çıkmaz. Bkz. [PRIVACY.md](PRIVACY.md).
 
 ### ⚠️ Sorumluluk reddi
 Instagram veya Meta ile bağlantılı, onaylı ya da desteklenen bir proje değildir. Instagram'ı otomatikleştirmek kullanım şartlarına aykırı olabilir ve hesabın kısıtlanmasına yol açabilir. Araç, her an değişebilen resmi olmayan web uç noktalarına dayanır. **Kullanım sorumluluğu sana aittir.**
@@ -137,7 +117,7 @@ Instagram veya Meta ile bağlantılı, onaylı ya da desteklenen bir proje deği
 ---
 
 ## Credits / Teşekkürler
-Timing and safety defaults and the unfollow technique of the console edition are inspired by [davidarroyo1234/InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) (MIT). / Bekleme ve güvenlik varsayılanları ile konsol sürümünün çıkarma tekniği bu projeden esinlenmiştir.
+Timing and safety defaults and the unfollow technique are inspired by [davidarroyo1234/InstagramUnfollowers](https://github.com/davidarroyo1234/InstagramUnfollowers) (MIT). / Bekleme ve güvenlik varsayılanları ile çıkarma tekniği bu projeden esinlenmiştir.
 
 ## License
 [MIT](LICENSE)

@@ -12,8 +12,6 @@ async function consoleRouter(msg) {
       case "queueControl":
         await queueControl(msg.op);
         return { ok: true };
-      case "follow":
-        return { ok: false, error: tx("errNoRefollow") };
     }
   } catch (e) {
     return { ok: false, error: e.message };
@@ -23,7 +21,6 @@ async function consoleRouter(msg) {
 let queueTimer;
 const host = {
   unfollow: apiUnfollow,
-  follow: async () => ({ ok: false, error: tx("errNoRefollow") }),
   schedule: (when) => {
     clearTimeout(queueTimer);
     queueTimer = setTimeout(() => pump(), Math.max(0, when - Date.now()));
@@ -59,7 +56,6 @@ async function openPanel() {
 
   await mountApp(doc, {
     chrome,
-    mode: "console",
     logoSrc: LOGO,
     reload: () => {
       frame.remove();

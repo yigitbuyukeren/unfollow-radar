@@ -1,5 +1,5 @@
 /*!
- * Unfollow Radar — console edition v1.0.0 (MIT)
+ * Unfollow Radar v1.0.0 (MIT)
  * EN: Open https://www.instagram.com while signed in, open DevTools (F12) → Console, paste this whole file, press Enter.
  * TR: Giriş yapmış hâlde https://www.instagram.com'u aç, DevTools (F12) → Console'a bu dosyanın tamamını yapıştır, Enter'a bas.
  * Not affiliated with Instagram/Meta. Everything runs locally in your browser; nothing is sent anywhere. Use at your own risk.
@@ -8,7 +8,7 @@
 (() => {
 const APP_CSS = ":root {\n  --bg: #f6f7fb;\n  --card: #ffffff;\n  --text: #14151a;\n  --muted: #6b6f7b;\n  --line: #e6e8ef;\n  --accent: #6d4aff;\n  --accent-2: #ff4f8b;\n  --good: #17a673;\n  --warn: #e5484d;\n  --shadow: 0 1px 2px rgba(20, 21, 26, .05), 0 8px 24px rgba(20, 21, 26, .06);\n}\n@media (prefers-color-scheme: dark) {\n  :root {\n    --bg: #0e0f14;\n    --card: #171921;\n    --text: #eceef5;\n    --muted: #9296a5;\n    --line: #262a36;\n    --shadow: 0 1px 2px rgba(0, 0, 0, .4), 0 8px 24px rgba(0, 0, 0, .35);\n  }\n}\n* { box-sizing: border-box; }\n[hidden] { display: none !important; }\nbody { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, \"SF Pro Text\", system-ui, sans-serif; }\n.top { display: flex; align-items: center; justify-content: space-between; }\n.top, main { max-width: 860px; margin: 0 auto; padding: 0 20px; }\n.top { padding-top: 32px; padding-bottom: 20px; }\n.brand { display: flex; align-items: center; gap: 14px; }\n.logo { width: 44px; height: 44px; border-radius: 12px; box-shadow: 0 6px 18px rgba(109, 74, 255, .35); }\nh1 { margin: 0; font-size: 22px; letter-spacing: -.02em; }\n.brand p { margin: 0; color: var(--muted); font-size: 13px; }\nmain { padding-bottom: 60px; display: grid; gap: 18px; }\n\n.card { background: var(--card); border: 1px solid var(--line); border-radius: 18px; padding: 18px; box-shadow: var(--shadow); }\n.row { display: flex; gap: 10px; }\ninput[type=search] { border: 0; outline: 0; background: transparent; color: var(--text); font: inherit; width: 100%; }\nbutton { font: inherit; cursor: pointer; border: 0; color: inherit; }\n.primary { padding: 0 22px; border-radius: 12px; color: #fff; font-weight: 600; background: linear-gradient(135deg, var(--accent), var(--accent-2)); }\n.primary:hover { filter: brightness(1.06); }\n.primary:disabled { opacity: .55; cursor: not-allowed; }\n\n.banner { display: flex; align-items: center; gap: 10px; margin-top: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(109, 74, 255, .1); color: var(--text); font-size: 14px; }\n.spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(109, 74, 255, .25); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }\n@keyframes spin { to { transform: rotate(360deg); } }\n.error { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(229, 72, 77, .12); color: var(--warn); font-size: 14px; }\n\n.who { margin: 0 0 10px; color: var(--muted); font-size: 14px; }\n.who b { color: var(--text); }\n.stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 12px; }\n.stat { background: var(--card); border: 1px solid var(--line); border-radius: 16px; padding: 14px 16px; box-shadow: var(--shadow); }\n.stat b { display: block; font-size: 26px; letter-spacing: -.02em; }\n.stat span { color: var(--muted); font-size: 13px; }\n.stat.warn b { color: var(--warn); }\n.stat.good b { color: var(--good); }\n\n.toolbar { display: flex; gap: 12px; align-items: center; justify-content: space-between; margin: 18px 0 10px; flex-wrap: wrap; }\n.tabs { display: flex; gap: 6px; background: var(--card); border: 1px solid var(--line); padding: 4px; border-radius: 12px; }\n.tabs button { background: transparent; color: var(--muted); padding: 7px 12px; border-radius: 9px; font-size: 13px; }\n.tabs button i { font-style: normal; opacity: .7; margin-left: 4px; }\n.tabs button.active { background: var(--accent); color: #fff; }\n#search { max-width: 220px; padding: 9px 12px; border: 1px solid var(--line); border-radius: 12px; background: var(--card); }\n\n.list { list-style: none; margin: 0; padding: 0; background: var(--card); border: 1px solid var(--line); border-radius: 18px; overflow: hidden; box-shadow: var(--shadow); }\n.list li { display: flex; align-items: center; gap: 12px; padding: 10px 16px; border-bottom: 1px solid var(--line); }\n.list li:last-child { border-bottom: 0; }\n.avatar { width: 40px; height: 40px; border-radius: 50%; flex: none; display: grid; place-items: center; color: #fff; font-weight: 600; background: linear-gradient(135deg, var(--accent), var(--accent-2)); overflow: hidden; }\n.avatar img { width: 100%; height: 100%; object-fit: cover; }\n.who-info { flex: 1; min-width: 0; }\n.who-info a { color: var(--text); font-weight: 600; text-decoration: none; }\n.who-info a:hover { text-decoration: underline; }\n.who-info small { display: block; color: var(--muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }\n.badge { display: inline-block; margin-left: 4px; width: 14px; height: 14px; border-radius: 50%; background: #3897f0; color: #fff; font-size: 9px; line-height: 14px; text-align: center; vertical-align: 1px; }\n.lock { margin-left: 6px; font-size: 12px; opacity: .6; }\n.act { padding: 7px 12px; border-radius: 10px; font-size: 13px; background: rgba(229, 72, 77, .12); color: var(--warn); font-weight: 600; }\n.act:hover { background: rgba(229, 72, 77, .2); }\n.act:disabled { opacity: .5; cursor: wait; }\n.empty { text-align: center; color: var(--muted); padding: 30px 0; }\n\n@media (max-width: 640px) {\n  .stats { grid-template-columns: repeat(2, 1fr); }\n  .row { flex-direction: column; }\n  .primary { padding: 11px; }\n  #search { max-width: none; width: 100%; }\n}\n\nh2 { margin: 0 0 10px; font-size: 18px; }\n.points { margin: 0 0 16px; padding-left: 18px; color: var(--muted); font-size: 14px; }\n.points li { margin-bottom: 8px; }\n.points b { color: var(--text); }\n.wide { width: 100%; padding: 12px; }\n.who-me { flex: 1; display: flex; flex-direction: column; justify-content: center; }\n.who-me span { color: var(--muted); font-size: 13px; }\n.ghost { padding: 7px 14px; border-radius: 10px; background: var(--bg); border: 1px solid var(--line); font-size: 13px; }\n.ghost:hover { border-color: var(--accent); }\n.ghost:disabled { opacity: .5; cursor: wait; }\n.danger { padding: 8px 14px; border-radius: 10px; background: var(--warn); color: #fff; font-weight: 600; font-size: 13px; }\n.danger:disabled { opacity: .45; cursor: not-allowed; }\n.link { background: none; color: var(--muted); text-decoration: underline; font-size: 12px; }\n\n.queue .q-head { display: flex; justify-content: space-between; gap: 10px; align-items: baseline; }\n.queue .q-head span { color: var(--muted); font-size: 13px; }\n.progress { height: 8px; background: var(--bg); border-radius: 99px; margin: 10px 0; overflow: hidden; }\n.progress div { height: 100%; width: 0; border-radius: 99px; background: linear-gradient(90deg, var(--accent), var(--accent-2)); transition: width .4s; }\n.q-actions { display: flex; gap: 8px; }\n.queue .hint { margin: 6px 0; color: var(--muted); font-size: 13px; }\n\n.bulk { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }\n.check { display: flex; align-items: center; gap: 8px; color: var(--muted); font-size: 14px; cursor: pointer; }\n.list input[type=checkbox], .check input { width: 18px; height: 18px; accent-color: var(--accent); flex: none; }\n.tabs { flex-wrap: wrap; }\n.row-actions { display: flex; gap: 6px; flex: none; }\n.sub-date { color: var(--muted); font-size: 12px; }\n.ghost.small { padding: 6px 10px; font-size: 12px; }\n\nfooter a.link { text-decoration: underline; }\nfooter { max-width: 860px; margin: 0 auto; padding: 0 20px 40px; text-align: center; color: var(--muted); font-size: 12px; }\nfooter p { margin: 0 0 6px; }\n\ndialog { border: 1px solid var(--line); border-radius: 18px; padding: 22px; max-width: 420px; background: var(--card); color: var(--text); box-shadow: 0 20px 60px rgba(0, 0, 0, .3); }\ndialog::backdrop { background: rgba(10, 11, 16, .5); }\n#dlg-msg { margin: 0 0 18px; white-space: pre-line; }\n.dlg-actions { display: flex; justify-content: flex-end; gap: 8px; }\n\n.muted { color: var(--muted); font-size: 13px; }\n#dlg-paste textarea { width: 100%; margin: 0 0 14px; padding: 10px; border: 1px solid var(--line); border-radius: 12px; background: var(--bg); color: var(--text); font: inherit; resize: vertical; }\n#dlg-paste p { margin: 0 0 10px; }\n#dlg-paste .primary { padding: 8px 18px; }\n.notice { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(23, 166, 115, .12); color: var(--good); font-size: 14px; }\n";
 const LOGO = "data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAADAAAAAwCAYAAABXAvmHAAAFTUlEQVR42tWaW08bRxiG56fwE/gd7AHu8HXoLXDZ2K1atQK1atXaKiVNQ5o2NCxpmhAIh0AwLOFgBxsKPnOwDQYDNgabg4FAUr3dcfAa411Ym6iwnzTSajXafWb2m3fe0beEqMTtisNyU8WB+bOKtPg5s48vmD18yezgKyaFr5kkGphtNDJb+IbZxLdMHN8xMXzPbOAHZh0/MlFYmFX8xKygiYmgmVnGHSaMu0wIv7JBtLCLuM8u4AE7h9/ZAB6yfrSyPjxivWhj3WhnXXjMzuIJOyM+ZafNz9ipcqI1Pq04KpPgRWPFASR4XCM8/manIcGjg3Wik3WIL9g3ZZfBV0nwqRsIjy52Et2sPdXL2qougD/CDYZHD2tDHzuBl9x4lVLapPQA38+NY4AbS73iRsvOLlhRR/AY5F7Dyo2IstroEB7DnAiRGy4np1KpR3iMcENmcs06XzL8a24Io9ygSHQMj3HuFYie4Se4ARA9w9u5fhA9w7/h+kD0DO/gekGuCt9aHYS1YQ0zbQnMSm3CvIbe2mAB/GBdAE7zEgLCWqY5GhbQb3BeCd7J9YCUCt9zO4p19yHUIh0/hleISW0jc60W2+5dTBo9JcFPc90gpcB7OlP42BHpihYN/w/3AqRY+HnrXt6LY+4DKW2iGDSGYTWGMGQMImrfKQBctycxYfTDZvTBbvTCZV6UZj+/37p1oyj4Wa4TpBj46bZt+WXH6ffoNy4XLNiOao9iyhzE3yrm/JTRhXfpd3K/ZSGsGd7FPQfRCt9+aykPvrs2pKg2NOfltLAmMi0bC8Kq4oJ11DnzBuGsGdME7+E6QLSqzYJ1V37BcMOqIvzzajdOpMFlZ7y3ehp9hqnMNY0TCdJqsCsuWG+jS35+3LqmCd7LPwPRqvPH6X8zD9+Pn6jqvNO8LEN47kVknfe15L6exzKvqjZv4x9UjX4NLfB+/imIFvjO2hyYq21TdZPyC+tyv8GaGXmTEmum5PshYVlVbVaEoNzPWz92KXyAfwKiZYd9aYzID7ZJiqO2wybcOYU6v8NmI+lOqUpl0OKR+82Z7JfCz/N/gWixB1RtsmE3r6rag7MDOK822UhJA1CTypDFnVvwJtul8Av8YxAt3qZHUhw5h9tiqt5mTojK/WjaZOHHaibl+0uSTKrpfFRYyH2B+pFL4YN8O4hWY3Z8qi5U49WM2Yw5l8OBlrCsNvMtuftzFp+qzmcX8fv0iSb4MC+AaHWVYWsytw4aQoqucsDgyEgljcP4EUTDBEYM4ziSrrPqYjOMKMIvNuYWetIa0QS/xD8C0WqJu2/55RdQrR+u8yla4kUhkmcNaJM3NiGkCO+rH83Muvz1PhnQBB/h/wQpxs/7zsgkHQT1NufVZshgy8z++aDpYTcMF8BTtTkLHxMCmuFX+FaQYg8jEetWHtiWZIepMaOW2GF0Z7zNpn2rYABb9ji8Jid8Jgf8pkmELS7sefL70dQpBj7KPwQp5SQV6tr46HY60RUsGn6N/wOk1GMgtcTn7fDZoAuX5nxE2l2z6qIU+54EQqaxkuA3+AcgVz3D0pyfbfAhLCxlWsDix1TdZIFUeurGM2mzJsxjXWrhRgc8hl7NaqMEH+N/A/k/D+BavE0x8Jv8fRA9wyf4FhA9w2/z90D0DJ/k74LoGX6H/wWEljL1Cr9beUckp3VYPcJjr7LZTGgRWY/w+5XNSFf+/KEATovIOoQX5SolrYDTIrKO4FMHlU35VXtaAdcHfBMkeOVqPa2A0yLyDZ/5qgv/l6AVcFpEvok5X5A2FwUtItM6LC1lXqfOU6mU1UYh/gNITVsBpzsTiwAAAABJRU5ErkJggg==";
-// ---- shared.js ----
+// ---- src/shared.js ----
 // Hem arka plan hem panel tarafından kullanılan sabitler ve yardımcılar.
 // Bekleme süreleri ve yeniden deneme kuralları davidarroyo1234/InstagramUnfollowers (MIT) varsayılanlarıyla aynıdır.
 
@@ -43,7 +43,7 @@ const isToday = (ts) => new Date(ts).toDateString() === new Date().toDateString(
 // [U, 1.2U) aralığında rastgele bekleme
 const randomGap = () => Math.floor(Math.random() * (LIMITS.gapMaxMs - LIMITS.gapMinMs)) + LIMITS.gapMinMs;
 
-// ---- i18n.js ----
+// ---- src/i18n.js ----
 // Türkçe / İngilizce metinler. Dil: kullanıcı seçimi (storage "lang"), yoksa tarayıcı dili.
 const STRINGS = {
   tr: {
@@ -101,7 +101,6 @@ const STRINGS = {
     unfollow: "Çıkar",
     queued: "Sırada",
     unprotect: "Korumayı kaldır",
-    refollow: "Geri takip et",
     openProfile: "Profili aç",
     resultsFor: (label, date) => `${label} için sonuçlar · ${date}`,
     incompleteMsg: (ef, eg, gf, gg) =>
@@ -116,7 +115,6 @@ const STRINGS = {
       `Günlük limit (${limit}) nedeniyle bugün yalnızca ${left} kişi çıkarılır; kalanı için yarın "Devam et"e basman gerekir.`,
     enqueueFail: "Kuyruğa eklenemedi.",
     startFail: "Başlatılamadı.",
-    followFail: "Takip edilemedi.",
     langToggle: "English",
     // tarama
     starting: "Başlıyor…",
@@ -143,20 +141,12 @@ const STRINGS = {
     lockedIncomplete: "Tarama eksik göründüğü için çıkarma kilitli. Taramayı yenile.",
     invalidUser: "Geçersiz kullanıcı adı.",
     // uzantı arka planı / sayfa otomasyonu
-    errConnect: "Instagram sayfasına bağlanılamadı. Instagram'da giriş yaptığından emin ol ve tekrar dene.",
-    errTimeout: "Zaman aşımı.",
-    errFollowBtn: "Takip düğmesi bulunamadı (zaten takip etmiyor olabilirsiniz).",
-    errMenuItem: "'Takibi bırak' seçeneği bulunamadı.",
-    errUnfollowVerify: "Takipten çıkma doğrulanamadı.",
-    errFollowBtn2: "'Takip et' düğmesi bulunamadı (zaten takip ediyor olabilirsiniz).",
-    errFollowVerify: "Takip etme doğrulanamadı.",
     errBlockedUi: "Instagram işlemi engelledi (action block).",
     // konsol sürümü
     errTokens: "Instagram oturum anahtarları okunamadı. Sayfayı yenileyip betiği tekrar çalıştır.",
     errNoTarget: "Kullanıcının kimliği bulunamadı; taramayı yenile.",
     errUnfollowFailed: (s) => `Takipten çıkarma başarısız (${s}).`,
     errStillFollowing: "Instagram işlemi uygulamadı (hâlâ takip ediliyor).",
-    errNoRefollow: "Konsol sürümünde geri takip yok; profili açıp elle takip et.",
     closePanel: "Kapat",
     errWrongSite: "Önce https://www.instagram.com adresini aç, giriş yap ve betiği orada çalıştır.",
   },
@@ -215,7 +205,6 @@ const STRINGS = {
     unfollow: "Unfollow",
     queued: "Queued",
     unprotect: "Unprotect",
-    refollow: "Follow back",
     openProfile: "Open profile",
     resultsFor: (label, date) => `Results for ${label} · ${date}`,
     incompleteMsg: (ef, eg, gf, gg) =>
@@ -230,7 +219,6 @@ const STRINGS = {
       `Because of the daily limit (${limit}), only ${left} will be unfollowed today; press "Resume" tomorrow for the rest.`,
     enqueueFail: "Could not add to the queue.",
     startFail: "Could not start.",
-    followFail: "Could not follow.",
     langToggle: "Türkçe",
     starting: "Starting…",
     resuming: (n) => `Resuming where it left off (${n} people cached)…`,
@@ -254,19 +242,11 @@ const STRINGS = {
     longPauseNote: (p, m) => `${p} people processed; taking a ${m} min break to protect your account.`,
     lockedIncomplete: "Unfollowing is locked because the scan looks incomplete. Scan again.",
     invalidUser: "Invalid username.",
-    errConnect: "Could not connect to the Instagram page. Make sure you're signed in to Instagram and try again.",
-    errTimeout: "Timed out.",
-    errFollowBtn: "Follow button not found (you may already not be following).",
-    errMenuItem: "The 'Unfollow' option was not found.",
-    errUnfollowVerify: "Could not verify the unfollow.",
-    errFollowBtn2: "'Follow' button not found (you may already be following).",
-    errFollowVerify: "Could not verify the follow.",
     errBlockedUi: "Instagram blocked the action (action block).",
     errTokens: "Could not read Instagram's session tokens. Reload the page and run the script again.",
     errNoTarget: "Could not find the user's ID; scan again.",
     errUnfollowFailed: (s) => `Unfollow failed (${s}).`,
     errStillFollowing: "Instagram did not apply the action (still following).",
-    errNoRefollow: "The console version can't follow back; open the profile and follow manually.",
     closePanel: "Close",
     errWrongSite: "Open https://www.instagram.com first, sign in, and run the script there.",
   },
@@ -286,7 +266,7 @@ async function initLang(area, onChanged) {
   onChanged?.addListener((changes) => changes.lang && setLang(changes.lang.newValue));
 }
 
-// ---- console-src/shim.js ----
+// ---- src/shim.js ----
 // Konsol sürümü için chrome.storage / chrome.runtime benzeri katman: localStorage üzerinde çalışır.
 const chrome = (() => {
   const PREFIX = "unfollowRadar:";
@@ -339,7 +319,7 @@ const chrome = (() => {
 })();
 const store = { get: (k) => chrome.storage.local.get(k), set: (o) => chrome.storage.local.set(o) };
 
-// ---- scan-core.js ----
+// ---- src/scan-core.js ----
 // Tarama çekirdeği: uzantı (content script) ve konsol sürümü ortak kullanır.
 // Gerektirenler (global): chrome.storage.local, SCAN, LIMITS, isToday, tx.
 const IG_APP_ID = "936619743392459";
@@ -521,9 +501,9 @@ async function resetStaleState() {
   if (state && (state.phase === "running" || state.phase === "waiting")) await setState({ phase: "idle" });
 }
 
-// ---- queue-core.js ----
-// Takipten çıkarma kuyruğu ve günlük limitler: uzantı arka planı ve konsol sürümü ortak kullanır.
-// Gerektirenler (global): store {get,set}, host {unfollow(username), follow(username), schedule(when)},
+// ---- src/queue-core.js ----
+// Takipten çıkarma kuyruğu ve günlük limitler.
+// Gerektirenler (global): store {get,set}, host {unfollow(username), schedule(when)},
 // LIMITS, isToday, randomGap, tx.
 const QUEUE = "queue";
 const USERNAME_RE = /^[A-Za-z0-9._]{1,30}$/;
@@ -631,16 +611,7 @@ async function queueControl(op) {
   if (op === "resume") pump();
 }
 
-async function follow(username) {
-  const res = await host.follow(username);
-  if (res.ok) {
-    const { history = [] } = await store.get("history");
-    await store.set({ history: history.filter((h) => h.username !== username) });
-  }
-  return res;
-}
-
-// ---- panel.js ----
+// ---- src/panel.js ----
 // Panel arayüzü. HTML metni (innerHTML) kullanmaz; yalnızca DOM komutları: Instagram'ın sayfa güvenlik
 // kuralları (CSP / Trusted Types) altında da çalışır. Uzantı ve konsol sürümü ortak kullanır.
 function buildPanel(doc, opts = {}) {
@@ -744,9 +715,8 @@ function buildPanel(doc, opts = {}) {
   return frag;
 }
 
-// ---- app.js ----
-// Panel mantığı: uzantı sayfası ve konsol sürümü ortak kullanır.
-// host = { chrome, mode: "extension" | "console", logoSrc, reload(), open(url) }
+// ---- src/app.js ----
+// Panel mantığı. host = { chrome, logoSrc, reload(), open(url) }
 async function mountApp(document, host) {
   const chrome = host.chrome;
   const win = document.defaultView;
@@ -772,13 +742,11 @@ async function mountApp(document, host) {
     { rootMargin: "200px" }
   );
 
-  // Resmi yükler; biri başarısız olursa diğer yolu dener:
-  // uzantı: önce indir (host izni) → olmazsa doğrudan; konsol: önce doğrudan (sayfanın kendi kaynağıyla) → olmazsa indir.
-  const loadImg = (src, noReferrer) =>
+  // Resmi yükler: önce doğrudan (sayfanın kendi kaynağıyla), olmazsa indirip blob olarak dener.
+  const loadImg = (src) =>
     new Promise((resolve, reject) => {
       const img = document.createElement("img");
       img.alt = "";
-      if (noReferrer) img.referrerPolicy = "no-referrer";
       img.onload = () => resolve(img);
       img.onerror = () => reject(new Error("img"));
       img.src = src;
@@ -791,12 +759,10 @@ async function mountApp(document, host) {
     }
     return loadImg(picCache.get(url));
   };
-  const direct = (url) => loadImg(url, host.mode === "extension");
 
   async function loadPic(el) {
     const url = el.dataset.pic;
-    const order = host.mode === "extension" ? [viaFetch, direct] : [direct, viaFetch];
-    for (const attempt of order) {
+    for (const attempt of [loadImg, viaFetch]) {
       try {
         el.replaceChildren(await attempt(url));
         return;
@@ -923,8 +889,7 @@ async function mountApp(document, host) {
     } else if (activeTab === "whitelist") {
       actions.append(button(tx("unprotect"), "ghost small", () => unprotect(u)));
     } else if (activeTab === "history") {
-      if (host.mode === "console") actions.append(button(tx("openProfile"), "ghost small", () => host.open(`https://www.instagram.com/${u.username}/`)));
-      else actions.append(button(tx("refollow"), "ghost small", (b) => refollow(u, b)));
+      actions.append(button(tx("openProfile"), "ghost small", () => host.open(`https://www.instagram.com/${u.username}/`)));
     }
     li.append(actions);
     return li;
@@ -1045,18 +1010,6 @@ async function mountApp(document, host) {
   };
   const unprotect = (u) => chrome.storage.local.set({ whitelist: S.whitelist.filter((w) => w.username !== u.username) });
 
-  async function refollow(entry, btn) {
-    btn.disabled = true;
-    btn.textContent = "…";
-    setError("");
-    const res = await send({ type: "follow", username: entry.username });
-    if (!res?.ok) {
-      btn.disabled = false;
-      btn.textContent = tx("refollow");
-      setError(res?.error || tx("followFail"));
-    }
-  }
-
   // ---------- beyaz liste: dışa / içe aktarma, toplu ekleme ----------
   const VALID_NAME = /^[A-Za-z0-9._]{1,30}$/;
   const addToWhitelist = (entries) => {
@@ -1176,7 +1129,7 @@ async function mountApp(document, host) {
   setInterval(renderQueue, 1000); // geri sayım
 }
 
-// ---- console-src/unfollow-api.js ----
+// ---- src/unfollow-api.js ----
 // Konsol sürümünde takipten çıkarma: Instagram web arayüzünün kullandığı GraphQL isteğini taklit eder.
 // Yöntem ve sabitler InstagramUnfollowers (MIT, davidarroyo1234) projesindeki yaklaşımdan esinlenmiştir.
 const GQL = { asbd: "129477", unfollowDocId: "27789106940691111", unfollowName: "usePolarisUnfollowMutation" };
@@ -1287,7 +1240,7 @@ async function apiUnfollow(username) {
   }
 }
 
-// ---- console-src/entry.js ----
+// ---- src/entry.js ----
 // Konsol sürümünün başlangıcı: platform arayüzü (host), mesaj yönlendirici ve panel penceresi.
 async function consoleRouter(msg) {
   try {
@@ -1302,8 +1255,6 @@ async function consoleRouter(msg) {
       case "queueControl":
         await queueControl(msg.op);
         return { ok: true };
-      case "follow":
-        return { ok: false, error: tx("errNoRefollow") };
     }
   } catch (e) {
     return { ok: false, error: e.message };
@@ -1313,7 +1264,6 @@ async function consoleRouter(msg) {
 let queueTimer;
 const host = {
   unfollow: apiUnfollow,
-  follow: async () => ({ ok: false, error: tx("errNoRefollow") }),
   schedule: (when) => {
     clearTimeout(queueTimer);
     queueTimer = setTimeout(() => pump(), Math.max(0, when - Date.now()));
@@ -1349,7 +1299,6 @@ async function openPanel() {
 
   await mountApp(doc, {
     chrome,
-    mode: "console",
     logoSrc: LOGO,
     reload: () => {
       frame.remove();
@@ -1361,7 +1310,7 @@ async function openPanel() {
   });
 }
 
-const BUILD = "1.0.0-1792499257008"; // build betiği doldurur
+const BUILD = "1.0.0-1792499935259"; // build betiği doldurur
 
 function destroyPanel() {
   clearTimeout(queueTimer);
