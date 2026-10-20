@@ -57,7 +57,11 @@ async function mountApp(document, host) {
         // sıradaki yolu dene
       }
     }
-    // olmadı: baş harf kalır
+    // olmadı: baş harf kalır. Nedenini görebilmek için ilk başarısızlığı konsola yaz.
+    if (!loadPic.warned) {
+      loadPic.warned = true;
+      console.warn("[Unfollow Radar] profile picture could not be loaded:", new URL(url, "https://x").host);
+    }
   }
 
   function avatar(u) {

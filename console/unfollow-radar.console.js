@@ -804,7 +804,11 @@ async function mountApp(document, host) {
         // sıradaki yolu dene
       }
     }
-    // olmadı: baş harf kalır
+    // olmadı: baş harf kalır. Nedenini görebilmek için ilk başarısızlığı konsola yaz.
+    if (!loadPic.warned) {
+      loadPic.warned = true;
+      console.warn("[Unfollow Radar] profile picture could not be loaded:", new URL(url, "https://x").host);
+    }
   }
 
   function avatar(u) {
@@ -1357,9 +1361,24 @@ async function openPanel() {
   });
 }
 
+const BUILD = "undefined-1792499247028"; // build betiği doldurur
+
+function destroyPanel() {
+  clearTimeout(queueTimer);
+  frame?.remove();
+  closeBtn?.remove();
+  frame = closeBtn = null;
+}
+
 (async () => {
-  if (window.__unfollowRadar) return window.__unfollowRadar.open();
-  window.__unfollowRadar = { open: openPanel };
+  const prev = window.__unfollowRadar;
+  if (prev && prev.build === BUILD) return prev.open(); // aynı sürüm zaten yüklü: sadece aç
+  // Farklı (eski) sürüm yüklüyse kaldır, yerine bunu kur. Çok eski sürümlerin kalıntılarını da temizle.
+  prev?.destroy?.();
+  for (const el of document.querySelectorAll("iframe, button")) {
+    if (el.style.zIndex === "2147483646" || (el.style.zIndex === "2147483647" && el.textContent === "✕")) el.remove();
+  }
+  window.__unfollowRadar = { build: BUILD, open: openPanel, destroy: destroyPanel };
   await initLang(chrome.storage.local, chrome.storage.onChanged);
   if (!/(^|\.)instagram\.com$/.test(location.hostname)) {
     delete window.__unfollowRadar;

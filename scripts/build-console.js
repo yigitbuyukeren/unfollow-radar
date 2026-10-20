@@ -17,7 +17,7 @@ const header = `/*!
  * https://github.com/yigitbuyukeren/unfollow-radar
  */
 `;
-const body = parts.map((p) => `// ---- ${p} ----\n${read(p)}`).join("\n");
+const body = parts.map((p) => `// ---- ${p} ----\n${read(p)}`).join("\n").replace("__BUILD_ID__", `${pkg.version}-${Date.now()}`);
 const out = `${header}(() => {\nconst APP_CSS = ${JSON.stringify(css)};\nconst LOGO = ${JSON.stringify(logo)};\n${body}\n})();\n`;
 fs.mkdirSync(path.join(root, "console"), { recursive: true });
 fs.writeFileSync(path.join(root, "console/unfollow-radar.console.js"), out);
