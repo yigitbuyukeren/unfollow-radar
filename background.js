@@ -39,7 +39,6 @@ async function startCompare() {
   for (let i = 0; i < 20; i++) {
     try {
       await chrome.tabs.sendMessage(tab.id, { type: "compare" });
-      await store.set({ scans: [...today, Date.now()] });
       return;
     } catch {
       await sleepMs(500); // content script henüz hazır değil

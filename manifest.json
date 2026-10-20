@@ -36,6 +36,7 @@
         "https://www.instagram.com/*"
       ],
       "js": [
+        "shared.js",
         "content.js"
       ]
     }

@@ -67,17 +67,16 @@ const selfId = () => document.cookie.match(/(?:^|; )ds_user_id=(\d+)/)?.[1];
 async function compare() {
   const uid = selfId();
   if (!uid) throw new Error("Instagram'a giriş yapmış olmalısınız.");
-  await setState({ phase: "running", text: "Hesap bilgisi alınıyor…" });
-  const info = await withBackoff(() => igGet(`/api/v1/users/${uid}/info/`), "hesap");
-  const username = info?.user?.username;
-  if (!username) throw new Error("Hesap bilgisi alınamadı (arayüz değişmiş olabilir).");
+  await setState({ phase: "running", text: "Başlıyor…" });
+  // Hesap adı yalnızca başlıkta görünen bir etiket; bu istek sınırlanırsa (429) beklemeden devam et.
+  const username = await igGet(`/api/v1/users/${uid}/info/`).then((i) => i?.user?.username).catch(() => null);
 
   const followers = await fetchAll(uid, "followers", "Takipçiler");
   const following = await fetchAll(uid, "following", "Takip edilenler");
   const followerNames = new Set(followers.map((u) => u.username));
   const followingNames = new Set(following.map((u) => u.username));
   return {
-    label: `@${username}`,
+    label: username ? `@${username}` : "Hesabım",
     username,
     ts: Date.now(),
     followerCount: followers.length,
@@ -94,7 +93,11 @@ async function run() {
   running = true;
   try {
     await setState({ phase: "running", text: "Başlıyor…" });
-    await setState({ phase: "done", result: await compare() });
+    const result = await compare();
+    // Günlük tarama hakkı yalnızca başarılı taramada düşer.
+    const { scans = [] } = await chrome.storage.local.get("scans");
+    await chrome.storage.local.set({ scans: [...scans.filter(isToday), Date.now()] });
+    await setState({ phase: "done", result });
   } catch (e) {
     await setState({ phase: "error", error: e.message });
   } finally {
