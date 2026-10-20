@@ -257,8 +257,8 @@ const send = (msg) => chrome.runtime.sendMessage(msg);
 async function enqueue(names) {
   const left = LIMITS.dailyUnfollows - todayUnfollows();
   if (names.length > 1) {
-    const minutes = Math.round((names.length * (LIMITS.gapMinMs + LIMITS.gapMaxMs)) / 2 / 60000);
-    let msg = `${names.length} kişi takipten çıkarılacak. Aralarında ${LIMITS.gapMinMs / 1000}–${LIMITS.gapMaxMs / 1000} sn beklenir (yaklaşık ${minutes} dk); tarayıcı açık kalmalı.`;
+    const minutes = Math.round((names.length * (LIMITS.gapMinMs + LIMITS.gapMaxMs) / 2 + names.length * 8000) / 60000 + Math.floor(names.length / LIMITS.longPauseEvery) * (LIMITS.longPauseMs / 60000));
+    let msg = `${names.length} kişi takipten çıkarılacak. Aralarında ${LIMITS.gapMinMs / 1000}–${LIMITS.gapMaxMs / 1000} sn beklenir, her ${LIMITS.longPauseEvery} kişide ${LIMITS.longPauseMs / 60000} dk mola verilir (yaklaşık ${minutes} dk); tarayıcı açık kalmalı.`;
     if (names.length > left) {
       msg += `\n\nGünlük limit (${LIMITS.dailyUnfollows}) nedeniyle bugün yalnızca ${Math.max(left, 0)} kişi çıkarılır; kalanı için yarın "Devam et"e basman gerekir.`;
     }

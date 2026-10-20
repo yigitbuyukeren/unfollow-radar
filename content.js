@@ -1,12 +1,11 @@
 // Instagram'ın oturum çerezleriyle aynı-origin istekleri yapar; ilerleme/sonuç chrome.storage'a yazılır.
 const IG_APP_ID = "936619743392459";
-const PAGE_SIZE = 50;
-const MAX_RETRIES = 3; // 429'da 60 sn, 120 sn, 240 sn bekler
 const BLOCK_API_RE = /feedback_required|checkpoint_required|action_blocked|challenge_required/i;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const setState = (state) => chrome.storage.local.set({ state });
 
+// 429 ve geçici kısıtlama (feedback_required...): artan beklemeyle yeniden denenir.
 class RateLimitError extends Error {}
 
 async function igGet(path) {
@@ -14,11 +13,11 @@ async function igGet(path) {
     credentials: "include",
     headers: { "x-ig-app-id": IG_APP_ID, "x-requested-with": "XMLHttpRequest" },
   });
-  if (res.status === 429) throw new RateLimitError("Instagram istek sınırı (429).");
+  if (res.status === 429) throw new RateLimitError("Instagram istek sınırı (429). Biraz bekleyip tekrar dene.");
   if (!res.ok) {
     const body = await res.text().catch(() => "");
     if (BLOCK_API_RE.test(body)) {
-      throw new Error("Instagram hesabına geçici bir kısıtlama uyguladı (feedback_required). Taramayı durdurduk; birkaç saat bekleyip tekrar dene.");
+      throw new RateLimitError("Instagram hesabına geçici bir kısıtlama uyguladı (feedback_required). Birkaç saat bekleyip tekrar dene.");
     }
     if (res.status === 401 || res.status === 403) throw new Error("Instagram'a giriş yapmış olmalısınız.");
     throw new Error(`İstek başarısız: ${res.status}`);
@@ -31,15 +30,35 @@ async function igGet(path) {
 }
 
 async function withBackoff(fn, label) {
-  for (let attempt = 0; ; attempt++) {
+  for (let retries = 0; ; ) {
     try {
       return await fn();
     } catch (e) {
-      if (!(e instanceof RateLimitError) || attempt >= MAX_RETRIES) throw e;
-      for (let s = 60 * 2 ** attempt; s > 0; s--) {
-        await setState({ phase: "waiting", text: `İstek sınırı: ${s} sn sonra devam edilecek (${label})` });
+      const limited = e instanceof RateLimitError;
+      const network = e instanceof TypeError || /fetch|network/i.test(e.message || "");
+      if (!(limited || network) || retries >= SCAN.maxRetries) throw e;
+      retries++;
+      const secs = (limited ? SCAN.rateLimitCooldownS : SCAN.networkRetryS) * retries;
+      for (let s = secs; s > 0; s--) {
+        await setState({ phase: "waiting", text: `${limited ? "İstek sınırı" : "Ağ hatası"}: ${s} sn sonra devam edilecek (${label})` });
         await sleep(1000);
       }
+    }
+  }
+}
+
+// Sayfalar arası bekleme + her N istekte uzun uyku.
+let requestsSinceLongSleep = 0;
+async function paceRequest() {
+  await sleep(Math.floor(Math.random() * SCAN.jitterSpanMs) + SCAN.jitterMinMs);
+  const T = SCAN.timeBetweenCyclesMs;
+  await sleep(Math.floor(Math.random() * (T * 1.3 - T)) + T);
+  if (++requestsSinceLongSleep >= SCAN.checksBeforeLongSleep) {
+    requestsSinceLongSleep = 0;
+    const ms = Math.max(0, SCAN.longSleepMs + (Math.random() * SCAN.longSleepJitterMs * 2 - SCAN.longSleepJitterMs));
+    for (let s = Math.round(ms / 1000); s > 0; s--) {
+      await setState({ phase: "waiting", text: `Güvenlik molası: ${s} sn` });
+      await sleep(1000);
     }
   }
 }
@@ -48,8 +67,9 @@ async function withBackoff(fn, label) {
 async function fetchAll(userId, kind, label, part, onPage) {
   const users = new Map(part.users.map((u) => [u.pk, u]));
   let maxId = part.maxId || "";
+  let pages = 0;
   do {
-    const q = `count=${PAGE_SIZE}${maxId ? `&max_id=${encodeURIComponent(maxId)}` : ""}`;
+    const q = `count=${SCAN.pageSize}${maxId ? `&max_id=${encodeURIComponent(maxId)}` : ""}`;
     const data = await withBackoff(() => igGet(`/api/v1/friendships/${userId}/${kind}/?${q}`), label);
     if (!Array.isArray(data.users)) throw new Error("Instagram yanıtı beklenenden farklı (arayüz değişmiş olabilir).");
     for (const u of data.users) {
@@ -65,7 +85,11 @@ async function fetchAll(userId, kind, label, part, onPage) {
     maxId = data.next_max_id || "";
     await onPage([...users.values()], maxId);
     await setState({ phase: "running", text: `${label} alınıyor… ${users.size}` });
-    if (maxId) await sleep(2000 + Math.random() * 2000);
+    if (maxId && ++pages >= SCAN.pageSafetyLimit) {
+      part.truncated = true; // sayfa güvenlik sınırı: liste eksik kalır, çıkarma kilitlenir
+      break;
+    }
+    if (maxId) await paceRequest();
   } while (maxId);
   return [...users.values()];
 }
@@ -77,6 +101,7 @@ async function compare() {
   const uid = selfId();
   if (!uid) throw new Error("Instagram'a giriş yapmış olmalısınız.");
   await setState({ phase: "running", text: "Başlıyor…" });
+  requestsSinceLongSleep = 0;
   // Hesap adı ve beklenen sayılar isteğe bağlı; bu istek sınırlanırsa (429) beklemeden devam et.
   const user = await igGet(`/api/v1/users/${uid}/info/`).then((i) => i?.user).catch(() => null);
   const username = user?.username;
@@ -108,7 +133,8 @@ async function compare() {
 
   // Eksik tarama koruması: Instagram'ın bildirdiği sayıyla uyuşmuyorsa çıkarma kilitlenir.
   const short = (got, expected) => typeof expected === "number" && got < expected - Math.max(2, expected * 0.03);
-  const incomplete = short(followers.length, user?.follower_count) || short(following.length, user?.following_count);
+  const incomplete =
+    short(followers.length, user?.follower_count) || short(following.length, user?.following_count) || !!progress.followers.truncated || !!progress.following.truncated;
 
   const followerNames = new Set(followers.map((u) => u.username));
   const followingNames = new Set(following.map((u) => u.username));

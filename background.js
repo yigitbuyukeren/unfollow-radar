@@ -137,10 +137,11 @@ async function pump() {
       q2.note = `Üst üste ${q2.failStreak} işlem başarısız oldu (Instagram kısıtlıyor olabilir). Güvenlik için kuyruk durduruldu; bir süre bekleyip "Devam et"e bas.`;
       q2.failStreak = 0;
     }
-    // Her N çıkarmada bir uzun mola; aksi halde kısa rastgele bekleme.
-    const longPause = success && q2.done > 0 && q2.done % LIMITS.longPauseEvery === 0 && q2.items.length > 0;
-    const wait = longPause ? randomLongPause() : randomGap();
-    if (longPause && !q2.paused) q2.note = `${q2.done} kişi çıkarıldı; hesabını korumak için ${Math.round(wait / 60000)} dk uzun mola veriliyor.`;
+    // Kısa rastgele bekleme; her 5. kişide ek olarak 5 dk mola. Son kişiden sonra beklenmez.
+    const processed = q2.done + q2.failed.length;
+    const longPause = q2.items.length > 0 && processed > 0 && processed % LIMITS.longPauseEvery === 0;
+    const wait = randomGap() + (longPause ? LIMITS.longPauseMs : 0);
+    if (longPause && !q2.paused) q2.note = `${processed} kişi işlendi; hesabını korumak için ${Math.round(LIMITS.longPauseMs / 60000)} dk mola veriliyor.`;
     q2.nextAt = Date.now() + wait;
     await store.set({ [QUEUE]: q2 });
     if (q2.items.length && !q2.paused) chrome.alarms.create("queue", { when: q2.nextAt });
