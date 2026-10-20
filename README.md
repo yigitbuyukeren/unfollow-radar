@@ -171,7 +171,3 @@ This project is **open source**, released under the **[MIT License](LICENSE)**: 
 🤝 Contributions are welcome: report bugs, suggest ideas or open a pull request. ⭐ If you like it, give it a star!
 
 </details>
-
----
-
-<div align="center"><sub>Built with ❤️ · Safety defaults inspired by <a href="https://github.com/davidarroyo1234/InstagramUnfollowers">InstagramUnfollowers</a> (MIT) · <code>npm run build</code> bundles <code>src/</code> into <code>unfollow-radar.js</code></sub></div>
