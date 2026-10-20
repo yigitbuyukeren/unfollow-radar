@@ -21,7 +21,7 @@
 ---
 
 <details open>
-<summary><h2>🇹🇷 Türkçe</h2></summary>
+<summary><b>🇹🇷 &nbsp;Türkçe</b></summary>
 
 
 Tek bir dosyayı tarayıcı konsoluna yapıştır, hepsi bu. **Kurulum yok, hesap yok, sunucu yok.**
@@ -98,7 +98,7 @@ Bu proje **açık kaynaktır** ve **[MIT lisansı](LICENSE)** ile yayınlanır: 
 </details>
 
 <details>
-<summary><h2>🇬🇧 English</h2></summary>
+<summary><b>🇬🇧 &nbsp;English</b></summary>
 
 
 Paste one file into your browser console and you're done. **No install, no account, no server.**
