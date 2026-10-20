@@ -20,8 +20,10 @@
 
 ---
 
+## 🇹🇷 Türkçe
+
 <details open>
-<summary><b>🇹🇷 &nbsp;Türkçe</b></summary>
+<summary><b>Aç / kapat</b></summary>
 
 
 Tek bir dosyayı tarayıcı konsoluna yapıştır, hepsi bu. **Kurulum yok, hesap yok, sunucu yok.**
@@ -97,8 +99,10 @@ Bu proje **açık kaynaktır** ve **[MIT lisansı](LICENSE)** ile yayınlanır: 
 
 </details>
 
+## 🇬🇧 English
+
 <details>
-<summary><b>🇬🇧 &nbsp;English</b></summary>
+<summary><b>Show / hide</b></summary>
 
 
 Paste one file into your browser console and you're done. **No install, no account, no server.**
