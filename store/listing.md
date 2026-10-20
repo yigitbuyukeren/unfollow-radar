@@ -13,7 +13,9 @@ Takip Analizi, kendi Instagram hesabındaki takipçi ve takip ettiğin kişileri
 • Geri takip etmeyenler, takip etmediklerin ve karşılıklı takipleştiklerin
 • Arama, profil resimleri ve doğrulanmış/gizli hesap işaretleri
 • Beyaz liste: takipte kalacağın hesapları koru
-• Yavaş toplu takipten çıkarma: kişiler arasında 45–120 sn bekler, günde en fazla 30 kişi
+• Yavaş toplu takipten çıkarma: kişiler arasında 45–120 sn, her 5 kişide uzun mola, günde en fazla 30 kişi
+• Instagram işlemi engellerse otomatik durur; tarama eksikse yanlış kişi çıkarmamak için kilitlenir
+• Beyaz listeyi JSON olarak dışa/içe aktar, toplu ekle
 • Geri alma: çıkardığın birini tek tıkla tekrar takip et
 • Günde en fazla 3 tarama ile hesabını korur
 

@@ -2,6 +2,7 @@
 const IG_APP_ID = "936619743392459";
 const PAGE_SIZE = 50;
 const MAX_RETRIES = 3; // 429'da 60 sn, 120 sn, 240 sn bekler
+const BLOCK_API_RE = /feedback_required|checkpoint_required|action_blocked|challenge_required/i;
 
 const sleep = (ms) => new Promise((r) => setTimeout(r, ms));
 const setState = (state) => chrome.storage.local.set({ state });
@@ -14,8 +15,14 @@ async function igGet(path) {
     headers: { "x-ig-app-id": IG_APP_ID, "x-requested-with": "XMLHttpRequest" },
   });
   if (res.status === 429) throw new RateLimitError("Instagram istek sınırı (429).");
-  if (res.status === 401 || res.status === 403) throw new Error("Instagram'a giriş yapmış olmalısınız.");
-  if (!res.ok) throw new Error(`İstek başarısız: ${res.status}`);
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    if (BLOCK_API_RE.test(body)) {
+      throw new Error("Instagram hesabına geçici bir kısıtlama uyguladı (feedback_required). Taramayı durdurduk; birkaç saat bekleyip tekrar dene.");
+    }
+    if (res.status === 401 || res.status === 403) throw new Error("Instagram'a giriş yapmış olmalısınız.");
+    throw new Error(`İstek başarısız: ${res.status}`);
+  }
   try {
     return await res.json();
   } catch {
@@ -37,15 +44,16 @@ async function withBackoff(fn, label) {
   }
 }
 
-async function fetchAll(userId, kind, label) {
-  const users = new Map();
-  let maxId = "";
+// part = { done, users, maxId }: yarım kalan taramayı sürdürmek için her sayfada kaydedilir.
+async function fetchAll(userId, kind, label, part, onPage) {
+  const users = new Map(part.users.map((u) => [u.pk, u]));
+  let maxId = part.maxId || "";
   do {
     const q = `count=${PAGE_SIZE}${maxId ? `&max_id=${encodeURIComponent(maxId)}` : ""}`;
     const data = await withBackoff(() => igGet(`/api/v1/friendships/${userId}/${kind}/?${q}`), label);
     if (!Array.isArray(data.users)) throw new Error("Instagram yanıtı beklenenden farklı (arayüz değişmiş olabilir).");
     for (const u of data.users) {
-      users.set(u.pk || u.id, {
+      users.set(String(u.pk || u.id), {
         pk: String(u.pk || u.id),
         username: u.username,
         fullName: u.full_name,
@@ -55,6 +63,7 @@ async function fetchAll(userId, kind, label) {
       });
     }
     maxId = data.next_max_id || "";
+    await onPage([...users.values()], maxId);
     await setState({ phase: "running", text: `${label} alınıyor… ${users.size}` });
     if (maxId) await sleep(2000 + Math.random() * 2000);
   } while (maxId);
@@ -68,17 +77,47 @@ async function compare() {
   const uid = selfId();
   if (!uid) throw new Error("Instagram'a giriş yapmış olmalısınız.");
   await setState({ phase: "running", text: "Başlıyor…" });
-  // Hesap adı yalnızca başlıkta görünen bir etiket; bu istek sınırlanırsa (429) beklemeden devam et.
-  const username = await igGet(`/api/v1/users/${uid}/info/`).then((i) => i?.user?.username).catch(() => null);
+  // Hesap adı ve beklenen sayılar isteğe bağlı; bu istek sınırlanırsa (429) beklemeden devam et.
+  const user = await igGet(`/api/v1/users/${uid}/info/`).then((i) => i?.user).catch(() => null);
+  const username = user?.username;
 
-  const followers = await fetchAll(uid, "followers", "Takipçiler");
-  const following = await fetchAll(uid, "following", "Takip edilenler");
+  // Önbellek: yarım kalan tarama varsa kaldığı yerden devam et.
+  const saved = (await chrome.storage.local.get("scanProgress")).scanProgress;
+  const fresh = () => ({ done: false, users: [], maxId: "" });
+  const progress =
+    saved && saved.uid === uid && Date.now() - saved.ts < LIMITS.resumeWindowMs
+      ? saved
+      : { uid, ts: Date.now(), followers: fresh(), following: fresh() };
+  const cached = progress.followers.users.length + progress.following.users.length;
+  if (cached) await setState({ phase: "running", text: `Kaldığı yerden devam ediliyor (${cached} kişi önbellekte)…` });
+
+  const pull = async (kind, label) => {
+    const part = progress[kind];
+    if (part.done) return part.users;
+    const users = await fetchAll(uid, kind, label, part, async (list, maxId) => {
+      Object.assign(part, { users: list, maxId });
+      progress.ts = Date.now();
+      await chrome.storage.local.set({ scanProgress: progress });
+    });
+    Object.assign(part, { done: true, users, maxId: "" });
+    await chrome.storage.local.set({ scanProgress: progress });
+    return users;
+  };
+  const followers = await pull("followers", "Takipçiler");
+  const following = await pull("following", "Takip edilenler");
+
+  // Eksik tarama koruması: Instagram'ın bildirdiği sayıyla uyuşmuyorsa çıkarma kilitlenir.
+  const short = (got, expected) => typeof expected === "number" && got < expected - Math.max(2, expected * 0.03);
+  const incomplete = short(followers.length, user?.follower_count) || short(following.length, user?.following_count);
+
   const followerNames = new Set(followers.map((u) => u.username));
   const followingNames = new Set(following.map((u) => u.username));
   return {
     label: username ? `@${username}` : "Hesabım",
     username,
     ts: Date.now(),
+    incomplete,
+    expected: { followers: user?.follower_count, following: user?.following_count },
     followerCount: followers.length,
     followingCount: following.length,
     notFollowingBack: following.filter((u) => !followerNames.has(u.username)),
@@ -94,9 +133,10 @@ async function run() {
   try {
     await setState({ phase: "running", text: "Başlıyor…" });
     const result = await compare();
-    // Günlük tarama hakkı yalnızca başarılı taramada düşer.
+    // Günlük tarama hakkı yalnızca başarılı taramada düşer; önbellek temizlenir.
     const { scans = [] } = await chrome.storage.local.get("scans");
     await chrome.storage.local.set({ scans: [...scans.filter(isToday), Date.now()] });
+    await chrome.storage.local.remove("scanProgress");
     await setState({ phase: "done", result });
   } catch (e) {
     await setState({ phase: "error", error: e.message });
@@ -131,30 +171,45 @@ async function waitFor(fn, ms = 8000) {
   return null;
 }
 
+// Instagram "işlem engellendi" penceresi / mesajı gösterdi mi?
+const BLOCK_DIALOG_RE = /işlem engellendi|action blocked|try again later|daha sonra tekrar dene|izin verilmiyor|we limit how often|bazı işlemleri sınırlıyoruz|geçici olarak engellen|temporarily blocked/i;
+const BLOCK_TEXT_RE = /işlem engellendi|action blocked|try again later/i;
+const isBlocked = () =>
+  [...document.querySelectorAll("[role=dialog], [role=alertdialog]")].some((d) => BLOCK_DIALOG_RE.test(d.innerText || "")) ||
+  BLOCK_TEXT_RE.test(document.body.innerText || "");
+
+class BlockedError extends Error {}
+
 async function uiAction(kind) {
   const FOLLOWING = /^(Takiptesin|Takip ediliyor|Following|Requested|İstek gönderildi)/i;
   const UNFOLLOW = /^(Takibi bırak|Unfollow)$/i;
   const FOLLOW = /^(Takip et|Follow)$/i;
+  // Hedef düğme görünene kadar bekler; arada engel penceresi çıkarsa hemen bildirir.
+  const until = async (find, ms) => {
+    const hit = await waitFor(() => find() || (isBlocked() ? "blocked" : null), ms);
+    if (hit === "blocked") throw new BlockedError("Instagram işlemi engelledi (action block).");
+    return hit;
+  };
   try {
     if (kind === "unfollow") {
-      const btn = await waitFor(() => findButton(FOLLOWING));
+      const btn = await until(() => findButton(FOLLOWING));
       if (!btn) throw new Error("Takip düğmesi bulunamadı (zaten takip etmiyor olabilirsiniz).");
       btn.click();
-      const item = await waitFor(() => findButton(UNFOLLOW));
+      const item = await until(() => findButton(UNFOLLOW));
       if (!item) throw new Error("'Takibi bırak' seçeneği bulunamadı.");
       item.click();
       await sleep(1200);
       findButton(UNFOLLOW)?.click(); // bazı hesaplarda onay penceresi çıkar
-      if (!(await waitFor(() => findButton(FOLLOW)))) throw new Error("Takipten çıkma doğrulanamadı.");
+      if (!(await until(() => findButton(FOLLOW)))) throw new Error("Takipten çıkma doğrulanamadı.");
     } else {
-      const btn = await waitFor(() => findButton(FOLLOW));
+      const btn = await until(() => findButton(FOLLOW));
       if (!btn) throw new Error("'Takip et' düğmesi bulunamadı (zaten takip ediyor olabilirsiniz).");
       btn.click();
-      if (!(await waitFor(() => findButton(FOLLOWING)))) throw new Error("Takip etme doğrulanamadı.");
+      if (!(await until(() => findButton(FOLLOWING)))) throw new Error("Takip etme doğrulanamadı.");
     }
     chrome.runtime.sendMessage({ type: "uiActionResult", ok: true });
   } catch (e) {
-    chrome.runtime.sendMessage({ type: "uiActionResult", ok: false, error: e.message });
+    chrome.runtime.sendMessage({ type: "uiActionResult", ok: false, blocked: e instanceof BlockedError, error: e.message });
   }
 }
 

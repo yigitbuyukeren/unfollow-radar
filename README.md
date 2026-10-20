@@ -4,8 +4,10 @@ Kendi Instagram hesabındaki takipçi ve takip ettiklerini karşılaştıran Chr
 
 - Giriş yapılan hesap otomatik taranır (günde en fazla 3 tarama)
 - Geri takip etmeyenler / takip etmediklerim / karşılıklı
-- Beyaz liste, geri takip (geri alma)
-- Yavaş toplu takipten çıkarma: 45–120 sn arayla, günde en fazla 30
+- Beyaz liste (dışa/içe aktarma, toplu ekleme) ve geri takip (geri alma)
+- Yavaş toplu takipten çıkarma: 45–120 sn arayla, her 5 kişide 5–10 dk mola, günde en fazla 30
+- Korumalar: Instagram "işlem engellendi" / `feedback_required` derse ya da üst üste 2 işlem başarısız olursa kuyruk durur; tarama eksik görünürse çıkarma kilitlenir
+- Yarım kalan tarama (6 saat içinde) kaldığı sayfadan devam eder
 - Tüm veriler yalnızca tarayıcıda; sunucu yok
 
 Limitler `shared.js` içindeki `LIMITS` nesnesinde.

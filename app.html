@@ -44,6 +44,7 @@
         <span id="status"></span>
       </div>
       <p id="error" class="error" hidden></p>
+      <p id="notice" class="notice" hidden></p>
     </section>
 
     <section id="queue" class="card queue" hidden>
@@ -66,6 +67,8 @@
         <div class="stat good"><b id="s-mutual">0</b><span>Karşılıklı</span></div>
       </div>
 
+      <p id="incomplete" class="error" hidden></p>
+
       <div class="toolbar">
         <div id="tabs" class="tabs" role="tablist">
           <button data-tab="notFollowingBack" class="active" role="tab">Geri takip etmeyenler <i></i></button>
@@ -80,6 +83,16 @@
       <div id="bulk" class="bulk" hidden>
         <label class="check"><input type="checkbox" id="select-all"> Tümünü seç</label>
         <button id="bulk-run" class="danger" disabled>Seçilenleri yavaşça çıkar (0)</button>
+      </div>
+
+      <div id="wl-tools" class="bulk" hidden>
+        <span class="muted">Korunan hesaplar toplu çıkarmadan hariç tutulur.</span>
+        <div class="row-actions">
+          <button id="wl-export" class="ghost small">Dışa aktar</button>
+          <button id="wl-import" class="ghost small">İçe aktar</button>
+          <button id="wl-paste" class="ghost small">Toplu ekle</button>
+          <input type="file" id="wl-file" accept=".json,application/json" hidden>
+        </div>
       </div>
 
       <ul id="list" class="list"></ul>
@@ -97,6 +110,15 @@
     <div class="dlg-actions">
       <button id="dlg-no" class="ghost">Vazgeç</button>
       <button id="dlg-yes" class="danger">Onayla</button>
+    </div>
+  </dialog>
+
+  <dialog id="dlg-paste">
+    <p>Korumak istediğin kullanıcı adlarını ya da profil bağlantılarını yapıştır (boşluk, virgül veya satır ile ayır).</p>
+    <textarea id="paste-text" rows="6" placeholder="ornek_kullanici, @baska.kisi, https://www.instagram.com/biri/"></textarea>
+    <div class="dlg-actions">
+      <button id="paste-no" class="ghost">Vazgeç</button>
+      <button id="paste-yes" class="primary">Ekle</button>
     </div>
   </dialog>
 

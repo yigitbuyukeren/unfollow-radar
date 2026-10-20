@@ -56,6 +56,13 @@ function showError() {
   $("error").hidden = !err;
   $("error").textContent = err || "";
 }
+let noticeTimer;
+function notify(text) {
+  $("notice").hidden = false;
+  $("notice").textContent = text;
+  clearTimeout(noticeTimer);
+  noticeTimer = setTimeout(() => ($("notice").hidden = true), 4000);
+}
 function setError(text) {
   localError = text || "";
   showError();
@@ -84,9 +91,11 @@ function button(label, cls, onClick, disabled = false) {
   return b;
 }
 
+const isLocked = () => !!S.state?.result?.incomplete;
+
 function row(u, queued) {
   const li = document.createElement("li");
-  if (activeTab === "notFollowingBack" && !queued.has(u.username)) {
+  if (activeTab === "notFollowingBack" && !queued.has(u.username) && !isLocked()) {
     const cb = document.createElement("input");
     cb.type = "checkbox";
     cb.checked = selected.has(u.username);
@@ -132,7 +141,7 @@ function row(u, queued) {
       button("Koru", "ghost small", () => protect(u)),
       queued.has(u.username)
         ? button("Sırada", "ghost small", () => {}, true)
-        : button("Çıkar", "act", () => enqueue([u.username]))
+        : button("Çıkar", "act", () => enqueue([u.username]), isLocked())
     );
   } else if (activeTab === "whitelist") {
     actions.append(button("Korumayı kaldır", "ghost small", () => unprotect(u)));
@@ -181,9 +190,11 @@ function renderQueue() {
 function renderBulk() {
   const show = activeTab === "notFollowingBack";
   $("bulk").hidden = !show;
+  $("wl-tools").hidden = activeTab !== "whitelist";
   if (!show) return;
   $("bulk-run").textContent = `Seçilenleri yavaşça çıkar (${selected.size})`;
-  $("bulk-run").disabled = selected.size === 0;
+  $("bulk-run").disabled = selected.size === 0 || isLocked();
+  $("select-all").disabled = isLocked();
 }
 
 function renderResults() {
@@ -198,6 +209,11 @@ function renderResults() {
     b.textContent = r.label;
     $("who").append(b, ` için sonuçlar · ${fmtDate(r.ts)}`);
   }
+  const exp = r?.expected || {};
+  $("incomplete").hidden = !r?.incomplete;
+  $("incomplete").textContent = r?.incomplete
+    ? `Tarama eksik görünüyor (Instagram ${exp.followers ?? "?"} takipçi / ${exp.following ?? "?"} takip diyor, ${r.followerCount} / ${r.followingCount} alındı). Yanlış kişileri çıkarmamak için takipten çıkarma kilitlendi. Taramayı yenile.`
+    : "";
   $("s-followers").textContent = r?.followerCount ?? 0;
   $("s-following").textContent = r?.followingCount ?? 0;
   $("s-nfb").textContent = listFor("notFollowingBack").length;
@@ -272,6 +288,61 @@ async function refollow(entry, btn) {
     setError(res?.error || "Takip edilemedi.");
   }
 }
+
+// ---------- beyaz liste: dışa / içe aktarma, toplu ekleme ----------
+const VALID_NAME = /^[A-Za-z0-9._]{1,30}$/;
+const addToWhitelist = (entries) => {
+  const have = whitelistNames();
+  const add = entries.filter((e) => !have.has(e.username) && have.add(e.username));
+  return chrome.storage.local.set({ whitelist: [...S.whitelist, ...add] }).then(() => add.length);
+};
+
+$("wl-export").addEventListener("click", () => {
+  if (!S.whitelist.length) return setError("Dışa aktarılacak korunan hesap yok.");
+  const blob = new Blob([JSON.stringify(S.whitelist, null, 2)], { type: "application/json" });
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `takip-analizi-korunanlar-${new Date().toISOString().slice(0, 10)}.json`;
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+});
+
+$("wl-import").addEventListener("click", () => $("wl-file").click());
+$("wl-file").addEventListener("change", async (ev) => {
+  const file = ev.target.files[0];
+  ev.target.value = "";
+  if (!file) return;
+  try {
+    const data = JSON.parse(await file.text());
+    if (!Array.isArray(data)) throw new Error();
+    const entries = data
+      .map((e) => (typeof e === "string" ? { username: e } : e))
+      .filter((e) => e && typeof e.username === "string" && VALID_NAME.test(e.username))
+      .map((e) => ({ username: e.username, fullName: e.fullName, pic: e.pic, verified: !!e.verified, isPrivate: !!e.isPrivate }));
+    if (!entries.length) throw new Error();
+    setError("");
+    const n = await addToWhitelist(entries);
+    notify(`${n} yeni hesap korunanlara eklendi.`);
+  } catch {
+    setError("Geçersiz dosya: kullanıcı adı içeren bir JSON listesi bekleniyordu.");
+  }
+});
+
+$("wl-paste").addEventListener("click", () => {
+  $("paste-text").value = "";
+  $("dlg-paste").showModal();
+});
+$("paste-no").addEventListener("click", () => $("dlg-paste").close());
+$("paste-yes").addEventListener("click", async () => {
+  const names = $("paste-text").value
+    .split(/[\s,;]+/)
+    .map((t) => t.match(/instagram\.com\/([A-Za-z0-9._]+)/i)?.[1] || t.replace(/^@/, ""))
+    .filter((n) => VALID_NAME.test(n));
+  $("dlg-paste").close();
+  if (!names.length) return setError("Geçerli bir kullanıcı adı bulunamadı.");
+  setError("");
+  notify(`${await addToWhitelist(names.map((username) => ({ username })))} yeni hesap korunanlara eklendi.`);
+});
 
 // ---------- olaylar ----------
 document.querySelectorAll("#tabs button").forEach((b) =>
