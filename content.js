@@ -62,7 +62,7 @@ async function fetchAll(userId, kind, label) {
   do {
     const q = `count=${PAGE_SIZE}${maxId ? `&max_id=${encodeURIComponent(maxId)}` : ""}`;
     const data = await withBackoff(() => igGet(`/api/v1/friendships/${userId}/${kind}/?${q}`), label);
-    for (const u of data.users || []) users.set(u.pk || u.id, { username: u.username, fullName: u.full_name });
+    for (const u of data.users || []) users.set(u.pk || u.id, { pk: String(u.pk || u.id), username: u.username, fullName: u.full_name });
     maxId = data.next_max_id || "";
     await setState({ phase: "running", text: `${label} alınıyor… ${users.size}` });
     if (maxId) await sleep(2000 + Math.random() * 2000);
@@ -84,6 +84,7 @@ async function compare() {
   const followingNames = new Set(following.map((u) => u.username));
   return {
     label: `@${username}`,
+    isSelf: document.cookie.includes(`ds_user_id=${user.id}`),
     followerCount: followers.length,
     followingCount: following.length,
     notFollowingBack: following.filter((u) => !followerNames.has(u.username)),
@@ -91,6 +92,28 @@ async function compare() {
     mutual: following.filter((u) => followerNames.has(u.username)),
   };
 }
+
+const csrfToken = () => document.cookie.match(/(?:^|; )csrftoken=([^;]+)/)?.[1] || "";
+
+async function igPost(path) {
+  const res = await fetch(`https://www.instagram.com${path}`, {
+    method: "POST",
+    credentials: "include",
+    headers: {
+      "x-ig-app-id": IG_APP_ID,
+      "x-csrftoken": csrfToken(),
+      "x-requested-with": "XMLHttpRequest",
+      "content-type": "application/x-www-form-urlencoded",
+    },
+    body: "",
+  });
+  if (res.status === 429) throw new Error("Instagram istek sınırı (429). Biraz bekleyin.");
+  if (!res.ok) throw new Error(`İşlem başarısız: ${res.status}`);
+  const data = await res.json().catch(() => ({}));
+  if (data.status && data.status !== "ok") throw new Error("Instagram işlemi reddetti.");
+}
+
+const ACTIONS = { unfollow: "destroy", removeFollower: "remove_follower" };
 
 let running = false;
 async function run() {
@@ -110,6 +133,11 @@ chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   if (msg?.type === "compare") {
     run();
     sendResponse({ ok: true });
+  } else if (msg?.type === "action" && ACTIONS[msg.action] && /^\d+$/.test(msg.pk)) {
+    igPost(`/api/v1/friendships/${ACTIONS[msg.action]}/${msg.pk}/`)
+      .then(() => sendResponse({ ok: true }))
+      .catch((e) => sendResponse({ ok: false, error: e.message }));
+    return true; // async yanıt
   }
 });
 
