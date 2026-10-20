@@ -25,26 +25,39 @@ async function mountApp(document, host) {
     { rootMargin: "200px" }
   );
 
+  // Resmi yükler; biri başarısız olursa diğer yolu dener:
+  // uzantı: önce indir (host izni) → olmazsa doğrudan; konsol: önce doğrudan (sayfanın kendi kaynağıyla) → olmazsa indir.
+  const loadImg = (src, noReferrer) =>
+    new Promise((resolve, reject) => {
+      const img = document.createElement("img");
+      img.alt = "";
+      if (noReferrer) img.referrerPolicy = "no-referrer";
+      img.onload = () => resolve(img);
+      img.onerror = () => reject(new Error("img"));
+      img.src = src;
+    });
+  const viaFetch = async (url) => {
+    if (!picCache.has(url)) {
+      const res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer" });
+      if (!res.ok) throw new Error(res.status);
+      picCache.set(url, URL.createObjectURL(await res.blob()));
+    }
+    return loadImg(picCache.get(url));
+  };
+  const direct = (url) => loadImg(url, host.mode === "extension");
+
   async function loadPic(el) {
     const url = el.dataset.pic;
-    const img = document.createElement("img");
-    img.alt = "";
-    img.referrerPolicy = "no-referrer";
-    try {
-      if (host.mode === "extension") {
-        if (!picCache.has(url)) {
-          const res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer" });
-          if (!res.ok) throw new Error(res.status);
-          picCache.set(url, URL.createObjectURL(await res.blob()));
-        }
-        img.src = picCache.get(url);
-      } else {
-        img.src = url; // konsol sürümünde sayfanın kendi izinleriyle doğrudan yüklenir
+    const order = host.mode === "extension" ? [viaFetch, direct] : [direct, viaFetch];
+    for (const attempt of order) {
+      try {
+        el.replaceChildren(await attempt(url));
+        return;
+      } catch {
+        // sıradaki yolu dene
       }
-      img.addEventListener("load", () => el.replaceChildren(img));
-    } catch {
-      // baş harf kalır
     }
+    // olmadı: baş harf kalır
   }
 
   function avatar(u) {
