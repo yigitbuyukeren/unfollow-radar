@@ -14,16 +14,13 @@
 [![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/yigitbuyukeren/unfollow-radar/pulls)
 ![Open source](https://img.shields.io/badge/open-source-orange)
 
-👇 **Dilini seç · Pick your language**
+🇹🇷 [Türkçe](#-türkçe) &nbsp;·&nbsp; 🇬🇧 [English](#-english)
 
 </div>
 
 ---
 
 ## 🇹🇷 Türkçe
-
-<details open>
-<summary><b>Aç / kapat</b></summary>
 
 
 Tek bir dosyayı tarayıcı konsoluna yapıştır, hepsi bu. **Kurulum yok, hesap yok, sunucu yok.**
@@ -97,12 +94,9 @@ Bu proje **açık kaynaktır** ve **[MIT lisansı](LICENSE)** ile yayınlanır: 
 
 🤝 Katkılar memnuniyetle karşılanır: hata bildir, fikir öner ya da pull request aç. ⭐ Beğendiysen yıldız vermeyi unutma!
 
-</details>
+---
 
 ## 🇬🇧 English
-
-<details>
-<summary><b>Show / hide</b></summary>
 
 
 Paste one file into your browser console and you're done. **No install, no account, no server.**
@@ -175,8 +169,6 @@ Not affiliated with Instagram. Automation may violate Instagram's terms and can 
 This project is **open source**, released under the **[MIT License](LICENSE)**: you may use, modify, distribute and even use it commercially. The only condition is keeping the license and copyright notice. The software is provided "as is", without warranty.
 
 🤝 Contributions are welcome: report bugs, suggest ideas or open a pull request. ⭐ If you like it, give it a star!
-
-</details>
 
 ---
 
