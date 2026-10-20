@@ -167,34 +167,3 @@ $("username").addEventListener("keydown", (e) => e.key === "Enter" && $("run").c
 
 chrome.storage.local.get("state").then(({ state }) => render(state));
 chrome.storage.onChanged.addListener((changes) => changes.state && render(changes.state.newValue));
-
-// Instagram veri indirmesi: followers_N.json = [{string_list_data:[{value}]}], following.json = {relationships_following:[{title}]}
-function namesFrom(json) {
-  const list = Array.isArray(json) ? json : Object.values(json).find(Array.isArray) || [];
-  return list.map((e) => e.title || e.string_list_data?.[0]?.value).filter(Boolean).map((username) => ({ username }));
-}
-
-$("files").addEventListener("change", async (ev) => {
-  try {
-    setError("");
-    const followers = [];
-    const following = [];
-    for (const f of ev.target.files) {
-      const names = namesFrom(JSON.parse(await f.text()));
-      (/following/i.test(f.name) ? following : followers).push(...names);
-    }
-    if (!followers.length || !following.length) throw new Error("Hem followers_*.json hem following.json seçilmeli.");
-    const followerSet = new Set(followers.map((u) => u.username));
-    const followingSet = new Set(following.map((u) => u.username));
-    showResult({
-      label: "Veri indirmesi",
-      followerCount: followers.length,
-      followingCount: following.length,
-      notFollowingBack: following.filter((u) => !followerSet.has(u.username)),
-      notFollowedBack: followers.filter((u) => !followingSet.has(u.username)),
-      mutual: following.filter((u) => followerSet.has(u.username)),
-    });
-  } catch (e) {
-    setError(e.message);
-  }
-});

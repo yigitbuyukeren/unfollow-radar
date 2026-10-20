@@ -46,10 +46,6 @@ button { font: inherit; cursor: pointer; border: 0; color: inherit; }
 .spinner { width: 16px; height: 16px; border-radius: 50%; border: 2px solid rgba(109, 74, 255, .25); border-top-color: var(--accent); animation: spin .8s linear infinite; flex: none; }
 @keyframes spin { to { transform: rotate(360deg); } }
 .error { margin: 14px 0 0; padding: 10px 12px; border-radius: 12px; background: rgba(229, 72, 77, .12); color: var(--warn); font-size: 14px; }
-details { margin-top: 14px; font-size: 14px; color: var(--muted); }
-summary { cursor: pointer; }
-.hint { margin: 8px 0; font-size: 13px; }
-code { background: var(--bg); padding: 1px 5px; border-radius: 6px; }
 
 .who { margin: 0 0 10px; color: var(--muted); font-size: 14px; }
 .who b { color: var(--text); }
