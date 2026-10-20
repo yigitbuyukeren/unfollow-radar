@@ -222,6 +222,19 @@ const render = () => {
   renderResults();
 };
 
+// Tarayıcının hazır confirm() penceresi dili tarayıcıdan aldığı için kendi onay penceremizi kullanıyoruz.
+function askConfirm(message, yesLabel = "Onayla") {
+  return new Promise((resolve) => {
+    const d = $("dlg");
+    $("dlg-msg").textContent = message;
+    $("dlg-yes").textContent = yesLabel;
+    $("dlg-yes").onclick = () => { d.close(); resolve(true); };
+    $("dlg-no").onclick = () => { d.close(); resolve(false); };
+    d.oncancel = () => resolve(false); // Esc
+    d.showModal();
+  });
+}
+
 // ---------- işlemler ----------
 const send = (msg) => chrome.runtime.sendMessage(msg);
 
@@ -233,7 +246,7 @@ async function enqueue(names) {
     if (names.length > left) {
       msg += `\n\nGünlük limit (${LIMITS.dailyUnfollows}) nedeniyle bugün yalnızca ${Math.max(left, 0)} kişi çıkarılır; kalanı için yarın "Devam et"e basman gerekir.`;
     }
-    if (!confirm(msg)) return;
+    if (!(await askConfirm(msg, "Çıkar"))) return;
   }
   const res = await send({ type: "enqueue", usernames: names });
   if (!res?.ok) return setError(res?.error || "Kuyruğa eklenemedi.");
@@ -293,7 +306,7 @@ $("ack").addEventListener("click", () => chrome.storage.local.set({ onboarded: t
 $("q-pause").addEventListener("click", () => send({ type: "queueControl", op: S.queue?.paused ? "resume" : "pause" }));
 $("q-clear").addEventListener("click", () => send({ type: "queueControl", op: "clear" }));
 $("wipe").addEventListener("click", async () => {
-  if (!confirm("Tarama sonuçları, korunanlar, geçmiş ve ayarlar dahil tüm verilerin bu tarayıcıdan silinecek. Emin misin?")) return;
+  if (!(await askConfirm("Tarama sonuçları, korunanlar, geçmiş ve ayarlar dahil tüm verilerin bu tarayıcıdan silinecek. Emin misin?", "Sil"))) return;
   await send({ type: "queueControl", op: "clear" });
   await chrome.storage.local.clear();
   location.reload();
