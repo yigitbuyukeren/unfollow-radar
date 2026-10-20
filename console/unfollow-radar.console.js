@@ -1,5 +1,5 @@
 /*!
- * Unfollow Radar — console edition vundefined (MIT)
+ * Unfollow Radar — console edition v1.0.0 (MIT)
  * EN: Open https://www.instagram.com while signed in, open DevTools (F12) → Console, paste this whole file, press Enter.
  * TR: Giriş yapmış hâlde https://www.instagram.com'u aç, DevTools (F12) → Console'a bu dosyanın tamamını yapıştır, Enter'a bas.
  * Not affiliated with Instagram/Meta. Everything runs locally in your browser; nothing is sent anywhere. Use at your own risk.
@@ -1361,7 +1361,7 @@ async function openPanel() {
   });
 }
 
-const BUILD = "undefined-1792499247028"; // build betiği doldurur
+const BUILD = "1.0.0-1792499257008"; // build betiği doldurur
 
 function destroyPanel() {
   clearTimeout(queueTimer);
