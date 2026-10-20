@@ -10,7 +10,9 @@
   ],
   "host_permissions": [
     "https://www.instagram.com/*",
-    "http://127.0.0.1:8765/*"
+    "http://127.0.0.1:8765/*",
+    "https://*.cdninstagram.com/*",
+    "https://*.fbcdn.net/*"
   ],
   "action": {
     "default_title": "Takip Analizi"

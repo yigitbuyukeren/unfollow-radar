@@ -7,19 +7,43 @@ const TABS = {
 let result = null;
 let activeTab = "notFollowingBack";
 
+// Resimleri uzantı indirir (host izni sayesinde); yalnızca ekrana girenler yüklenir.
+const picCache = new Map(); // url -> object URL
+const picObserver = new IntersectionObserver(
+  (entries) => {
+    for (const e of entries) {
+      if (!e.isIntersecting) continue;
+      picObserver.unobserve(e.target);
+      loadPic(e.target);
+    }
+  },
+  { rootMargin: "200px" }
+);
+
+async function loadPic(el) {
+  const url = el.dataset.pic;
+  try {
+    if (!picCache.has(url)) {
+      const res = await fetch(url, { credentials: "omit", referrerPolicy: "no-referrer" });
+      if (!res.ok) throw new Error(res.status);
+      picCache.set(url, URL.createObjectURL(await res.blob()));
+    }
+    const img = document.createElement("img");
+    img.alt = "";
+    img.src = picCache.get(url);
+    el.replaceChildren(img);
+  } catch {
+    // baş harf kalır
+  }
+}
+
 function avatar(u) {
   const el = document.createElement("div");
   el.className = "avatar";
-  const initial = (u.username || "?")[0].toUpperCase();
+  el.textContent = (u.username || "?")[0].toUpperCase();
   if (u.pic) {
-    const img = document.createElement("img");
-    img.src = u.pic;
-    img.referrerPolicy = "no-referrer";
-    img.alt = "";
-    img.addEventListener("error", () => { img.remove(); el.textContent = initial; });
-    el.append(img);
-  } else {
-    el.textContent = initial;
+    el.dataset.pic = u.pic;
+    picObserver.observe(el);
   }
   return el;
 }
