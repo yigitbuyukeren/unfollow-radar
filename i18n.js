@@ -112,6 +112,7 @@ const STRINGS = {
     errStillFollowing: "Instagram işlemi uygulamadı (hâlâ takip ediliyor).",
     errNoRefollow: "Konsol sürümünde geri takip yok; profili açıp elle takip et.",
     closePanel: "Kapat",
+    errWrongSite: "Önce https://www.instagram.com adresini aç, giriş yap ve betiği orada çalıştır.",
   },
   en: {
     appName: "Unfollow Radar",
@@ -221,6 +222,7 @@ const STRINGS = {
     errStillFollowing: "Instagram did not apply the action (still following).",
     errNoRefollow: "The console version can't follow back; open the profile and follow manually.",
     closePanel: "Close",
+    errWrongSite: "Open https://www.instagram.com first, sign in, and run the script there.",
   },
 };
 

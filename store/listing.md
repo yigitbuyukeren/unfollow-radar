@@ -1,13 +1,13 @@
 # Chrome Web Store başvuru metinleri
 
 ## Ad
-Takip Analizi
+Unfollow Radar
 
 ## Kısa açıklama (≤132 karakter)
 Instagram'da seni geri takip etmeyenleri bul, yavaş ve güvenli şekilde yönet. Veriler yalnızca cihazında kalır.
 
 ## Ayrıntılı açıklama
-Takip Analizi, kendi Instagram hesabındaki takipçi ve takip ettiğin kişileri karşılaştırır ve seni geri takip etmeyen hesapları listeler.
+Unfollow Radar, kendi Instagram hesabındaki takipçi ve takip ettiğin kişileri karşılaştırır ve seni geri takip etmeyen hesapları listeler.
 
 ÖZELLİKLER
 • Geri takip etmeyenler, takip etmediklerin ve karşılıklı takipleştiklerin

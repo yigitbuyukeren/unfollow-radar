@@ -5,12 +5,13 @@ const cp = require("child_process");
 
 const root = path.join(__dirname, "..");
 const out = path.join(root, "dist");
-const FILES = ["background.js", "content.js", "shared.js", "app.html", "app.css", "app.js"];
+const FILES = ["background.js", "content.js", "shared.js", "i18n.js", "scan-core.js", "queue-core.js", "panel.js", "app.js", "app-extension.js", "app.html", "app.css"];
 
 fs.rmSync(out, { recursive: true, force: true });
 fs.mkdirSync(out);
 for (const f of FILES) fs.copyFileSync(path.join(root, f), path.join(out, f));
 fs.cpSync(path.join(root, "icons"), path.join(out, "icons"), { recursive: true });
+fs.cpSync(path.join(root, "_locales"), path.join(out, "_locales"), { recursive: true });
 
 const manifest = JSON.parse(fs.readFileSync(path.join(root, "manifest.json"), "utf8"));
 manifest.host_permissions = manifest.host_permissions.filter((h) => !h.includes("127.0.0.1"));
@@ -27,7 +28,7 @@ for (const f of fs.readdirSync(out)) {
   }
 }
 
-const zip = path.join(root, `takip-analizi-${manifest.version}.zip`);
+const zip = path.join(root, `unfollow-radar-${manifest.version}.zip`);
 fs.rmSync(zip, { force: true });
 cp.execFileSync("zip", ["-qr", zip, "."], { cwd: out });
 console.log(`Hazır: ${path.basename(zip)}`);

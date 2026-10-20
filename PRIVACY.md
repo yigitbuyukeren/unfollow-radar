@@ -4,7 +4,7 @@ Son güncelleme / Last updated: 2026-10-20
 
 ## Türkçe
 
-**Takip Analizi** tarayıcı uzantısı, kullanıcıların Instagram hesaplarındaki takipçi ve takip edilen listelerini karşılaştırmasına yardım eder.
+**Unfollow Radar** tarayıcı uzantısı, kullanıcıların Instagram hesaplarındaki takipçi ve takip edilen listelerini karşılaştırmasına yardım eder.
 
 **Topladığımız veri: yok.** Geliştirici olarak hiçbir veriye erişmiyoruz. Uzantının bir sunucusu, hesabı, analitik ya da reklam altyapısı yoktur.
 
@@ -23,11 +23,11 @@ Uzantı Instagram şifrenizi görmez, istemez ve saklamaz. Instagram'a, zaten a�
 
 **Sorumluluk:** Bu uzantı Instagram veya Meta ile bağlantılı değildir. Otomasyon, Instagram'ın kullanım şartlarına aykırı sayılabilir ve hesap kısıtlamasına yol açabilir; kullanım sorumluluğu kullanıcıya aittir.
 
-İletişim: yigiterenbuyukeren5@gmail.com
+İletişim: GitHub Issues — https://github.com/yigitbuyukeren/unfollow-radar/issues
 
 ## English
 
-**Takip Analizi** is a browser extension that helps users compare the followers and following lists of their own Instagram account.
+**Unfollow Radar** is a browser extension that helps users compare the followers and following lists of their own Instagram account.
 
 **Data we collect: none.** The developer has no access to any data. The extension has no server, accounts, analytics or ads.
 
@@ -39,4 +39,7 @@ The extension never sees, asks for or stores your Instagram password.
 
 **Disclaimer:** This extension is not affiliated with Instagram or Meta. Automation may violate Instagram's Terms of Use and may result in account restrictions; use is at your own risk.
 
-Contact: yigiterenbuyukeren5@gmail.com
+Contact: GitHub Issues — https://github.com/yigitbuyukeren/unfollow-radar/issues
+
+
+Konsol sürümü / Console edition: aynı ilkeler geçerlidir; veriler yalnızca instagram.com sayfasının `localStorage` alanında tutulur. / Same principles apply; data lives only in the instagram.com page's `localStorage`.

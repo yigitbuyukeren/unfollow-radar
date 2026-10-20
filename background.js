@@ -1,10 +1,8 @@
-importScripts("shared.js");
+importScripts("shared.js", "i18n.js", "queue-core.js");
 
 const store = { get: (k) => chrome.storage.local.get(k), set: (o) => chrome.storage.local.set(o) };
 const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
-const QUEUE = "queue";
-const emptyQueue = () => ({ items: [], total: 0, done: 0, failed: [], paused: false, nextAt: 0, note: "" });
-const getQueue = async () => (await store.get(QUEUE))[QUEUE] || emptyQueue();
+initLang(chrome.storage.local, chrome.storage.onChanged);
 
 // --- Panel: simgeye tıklayınca tam sayfa uygulamayı aç / öne getir ---
 chrome.action.onClicked.addListener(async () => {
@@ -20,12 +18,7 @@ chrome.action.onClicked.addListener(async () => {
 
 // --- Tarama: giriş yapılmış hesap; günlük limit uygulanır ---
 async function startCompare() {
-  const { scans = [] } = await store.get("scans");
-  const today = scans.filter(isToday);
-  if (today.length >= LIMITS.dailyScans) {
-    throw new Error(`Bugünkü ${LIMITS.dailyScans} tarama hakkın doldu. Yarın tekrar dene.`);
-  }
-
+  await assertScanQuota();
   const tabs = await chrome.tabs.query({ url: "https://www.instagram.com/*" });
   let tab = tabs.find((t) => !t.url.includes("#ift-"));
   if (!tab) {
@@ -44,7 +37,7 @@ async function startCompare() {
       await sleepMs(500); // content script henüz hazır değil
     }
   }
-  throw new Error("Instagram sayfasına bağlanılamadı. Instagram'da giriş yaptığından emin ol ve tekrar dene.");
+  throw new Error(tx("errConnect"));
 }
 
 // İş bitince (ya da hata verince) bizim açtığımız arka plan sekmesini kapat.
@@ -60,7 +53,7 @@ chrome.storage.onChanged.addListener(async (changes) => {
 
 // --- Takip / takipten çık: profili arka plan sekmesinde açar, content.js arayüzü sürer ---
 async function uiAction(kind, username) {
-  if (!/^[A-Za-z0-9._]{1,30}$/.test(username)) return { ok: false, error: "Geçersiz kullanıcı adı." };
+  if (!USERNAME_RE.test(username)) return { ok: false, error: tx("invalidUser") };
   const tab = await chrome.tabs.create({ url: `https://www.instagram.com/${username}/#ift-${kind}`, active: false });
   const result = await new Promise((resolve) => {
     const onMsg = (m, sender) => {
@@ -70,118 +63,21 @@ async function uiAction(kind, username) {
       }
     };
     chrome.runtime.onMessage.addListener(onMsg);
-    setTimeout(() => resolve({ ok: false, error: "Zaman aşımı." }), 30000);
+    setTimeout(() => resolve({ ok: false, error: tx("errTimeout") }), 30000);
   });
   chrome.tabs.remove(tab.id).catch(() => {});
   return result;
 }
 
-async function recordUnfollow(username) {
-  const { state, history = [] } = await store.get(["state", "history"]);
-  const u = state?.result?.notFollowingBack?.find((x) => x.username === username);
-  history.push({ username, fullName: u?.fullName, pic: u?.pic, ts: Date.now() });
-  const patch = { history: history.slice(-200) };
-  if (state?.phase === "done" && u) {
-    state.result.notFollowingBack = state.result.notFollowingBack.filter((x) => x.username !== username);
-    state.result.followingCount--;
-    patch.state = state;
-  }
-  await store.set(patch);
-}
-
-// --- Yavaş toplu çıkarma kuyruğu: aralarında rastgele bekleme + günlük limit ---
-let pumping = false;
-async function pump() {
-  if (pumping) return;
-  pumping = true;
-  try {
-    const q = await getQueue();
-    if (q.paused || !q.items.length) return;
-
-    const { history = [], whitelist = [] } = await store.get(["history", "whitelist"]);
-    if (history.filter((h) => isToday(h.ts)).length >= LIMITS.dailyUnfollows) {
-      q.paused = true;
-      q.note = `Günlük ${LIMITS.dailyUnfollows} çıkarma limiti doldu. Yarın "Devam et" ile sürdürebilirsin.`;
-      await store.set({ [QUEUE]: q });
-      return;
-    }
-    if (q.nextAt - Date.now() > 1000) {
-      chrome.alarms.create("queue", { when: q.nextAt });
-      return;
-    }
-
-    const username = q.items[0];
-    let res = { ok: true, skipped: true };
-    if (!whitelist.some((w) => w.username === username)) res = await uiAction("unfollow", username);
-
-    const q2 = await getQueue(); // bu arada duraklatılmış / iptal edilmiş olabilir
-    if (res.blocked) {
-      // Instagram "işlem engellendi" dedi: kişiyi sırada bırak, kuyruğu durdur.
-      q2.paused = true;
-      q2.note = "Instagram işlemi engelledi. Hesabını korumak için kuyruk durduruldu; birkaç saat bekleyip \"Devam et\"e bas.";
-      await store.set({ [QUEUE]: q2 });
-      return;
-    }
-    q2.items = q2.items.filter((u) => u !== username);
-    const success = res.ok && !res.skipped;
-    if (q2.total) {
-      if (success) q2.done++;
-      else if (!res.ok) q2.failed.push({ username, error: res.error });
-    }
-    if (success) await recordUnfollow(username);
-    if (!res.ok) q2.failStreak = (q2.failStreak || 0) + 1;
-    else if (success) q2.failStreak = 0;
-    q2.note = "";
-    if (q2.failStreak >= LIMITS.maxFailStreak) {
-      q2.paused = true;
-      q2.note = `Üst üste ${q2.failStreak} işlem başarısız oldu (Instagram kısıtlıyor olabilir). Güvenlik için kuyruk durduruldu; bir süre bekleyip "Devam et"e bas.`;
-      q2.failStreak = 0;
-    }
-    // Kısa rastgele bekleme; her 5. kişide ek olarak 5 dk mola. Son kişiden sonra beklenmez.
-    const processed = q2.done + q2.failed.length;
-    const longPause = q2.items.length > 0 && processed > 0 && processed % LIMITS.longPauseEvery === 0;
-    const wait = randomGap() + (longPause ? LIMITS.longPauseMs : 0);
-    if (longPause && !q2.paused) q2.note = `${processed} kişi işlendi; hesabını korumak için ${Math.round(LIMITS.longPauseMs / 60000)} dk mola veriliyor.`;
-    q2.nextAt = Date.now() + wait;
-    await store.set({ [QUEUE]: q2 });
-    if (q2.items.length && !q2.paused) chrome.alarms.create("queue", { when: q2.nextAt });
-  } finally {
-    pumping = false;
-  }
-}
+// queue-core.js'in beklediği platform arayüzü
+const host = {
+  unfollow: (u) => uiAction("unfollow", u),
+  follow: (u) => uiAction("follow", u),
+  schedule: (when) => chrome.alarms.create("queue", { when }),
+};
 
 chrome.alarms.onAlarm.addListener((a) => a.name === "queue" && pump());
 chrome.runtime.onStartup.addListener(pump);
-
-async function enqueue(usernames) {
-  const { state } = await store.get("state");
-  if (state?.result?.incomplete) throw new Error("Tarama eksik göründüğü için çıkarma kilitli. Taramayı yenile.");
-  const q = await getQueue();
-  if (!q.items.length) Object.assign(q, { total: 0, done: 0, failed: [], note: "" });
-  const fresh = usernames.filter((u) => /^[A-Za-z0-9._]{1,30}$/.test(u) && !q.items.includes(u));
-  q.items.push(...fresh);
-  q.total += fresh.length;
-  await store.set({ [QUEUE]: q });
-  pump();
-}
-
-async function queueControl(op) {
-  const q = await getQueue();
-  if (op === "pause") q.paused = true;
-  else if (op === "resume") Object.assign(q, { paused: false, note: "", failStreak: 0 });
-  else if (op === "clear") return store.set({ [QUEUE]: emptyQueue() });
-  await store.set({ [QUEUE]: q });
-  if (op === "resume") pump();
-}
-
-async function follow(username) {
-  const res = await uiAction("follow", username);
-  if (res.ok) {
-    const { history = [] } = await store.get("history");
-    await store.set({ history: history.filter((h) => h.username !== username) });
-  }
-  return res;
-}
 
 chrome.runtime.onMessage.addListener((msg, _sender, sendResponse) => {
   const reply = (p) => p.then(() => sendResponse({ ok: true })).catch((e) => sendResponse({ ok: false, error: e.message }));

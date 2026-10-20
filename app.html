@@ -1,128 +1,17 @@
 <!doctype html>
-<html lang="tr">
+<html>
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Takip Analizi</title>
+  <title>Unfollow Radar</title>
   <link rel="icon" href="icons/icon32.png">
   <link rel="stylesheet" href="app.css">
 </head>
 <body>
-  <header class="top">
-    <div class="brand">
-      <img class="logo" src="icons/icon128.png" alt="" width="44" height="44">
-      <div>
-        <h1>Takip Analizi</h1>
-        <p>Seni geri takip etmeyenleri bul, güvenle yönet</p>
-      </div>
-    </div>
-  </header>
-
-  <main>
-    <section id="onboarding" class="card" hidden>
-      <h2>Başlamadan önce</h2>
-      <ul class="points">
-        <li><b>Verilerin sende kalır.</b> Hiçbir şey sunucuya gönderilmez; her şey bu tarayıcıda saklanır.</li>
-        <li><b>Sadece kendi hesabın.</b> Instagram'da hangi hesapla giriş yaptıysan o taranır.</li>
-        <li><b>Günde en fazla 3 tarama.</b> Instagram'ı yormamak ve hesabını korumak için.</li>
-        <li><b>Takipten çıkarma yavaştır.</b> Kişiler arasında 4–5 saniye, her 5 kişide ise 5 dakika beklenir; günde en fazla 30 kişi çıkarılır.</li>
-        <li><b>Risk:</b> Bu araç Instagram ile bağlantılı değildir. Otomasyon, Instagram'ın kullanım şartlarına aykırı sayılabilir ve nadiren de olsa hesap kısıtlamasına yol açabilir. Sorumluluk sana aittir.</li>
-      </ul>
-      <button id="ack" class="primary wide">Anladım, başla</button>
-    </section>
-
-    <section id="start" class="card start" hidden>
-      <div class="row">
-        <div class="who-me">
-          <b>Instagram hesabını tara</b>
-          <span id="quota"></span>
-        </div>
-        <button id="run" class="primary">Hesabımı tara</button>
-      </div>
-      <div id="banner" class="banner" hidden>
-        <div class="spinner" aria-hidden="true"></div>
-        <span id="status"></span>
-      </div>
-      <p id="error" class="error" hidden></p>
-      <p id="notice" class="notice" hidden></p>
-    </section>
-
-    <section id="queue" class="card queue" hidden>
-      <div class="q-head"><b id="q-title"></b><span id="q-sub"></span></div>
-      <div class="progress"><div id="q-bar"></div></div>
-      <p id="q-note" class="hint" hidden></p>
-      <p id="q-fail" class="error" hidden></p>
-      <div class="q-actions">
-        <button id="q-pause" class="ghost"></button>
-        <button id="q-clear" class="ghost"></button>
-      </div>
-    </section>
-
-    <section id="results" hidden>
-      <p id="who" class="who"></p>
-      <div class="stats">
-        <div class="stat"><b id="s-followers">0</b><span>Takipçi</span></div>
-        <div class="stat"><b id="s-following">0</b><span>Takip edilen</span></div>
-        <div class="stat warn"><b id="s-nfb">0</b><span>Geri takip etmeyen</span></div>
-        <div class="stat good"><b id="s-mutual">0</b><span>Karşılıklı</span></div>
-      </div>
-
-      <p id="incomplete" class="error" hidden></p>
-
-      <div class="toolbar">
-        <div id="tabs" class="tabs" role="tablist">
-          <button data-tab="notFollowingBack" class="active" role="tab">Geri takip etmeyenler <i></i></button>
-          <button data-tab="notFollowedBack" role="tab">Takip etmediklerim <i></i></button>
-          <button data-tab="mutual" role="tab">Karşılıklı <i></i></button>
-          <button data-tab="whitelist" role="tab">Korunanlar <i></i></button>
-          <button data-tab="history" role="tab">Çıkarılanlar <i></i></button>
-        </div>
-        <input id="search" type="search" placeholder="Ara…" autocomplete="off">
-      </div>
-
-      <div id="bulk" class="bulk" hidden>
-        <label class="check"><input type="checkbox" id="select-all"> Tümünü seç</label>
-        <button id="bulk-run" class="danger" disabled>Seçilenleri yavaşça çıkar (0)</button>
-      </div>
-
-      <div id="wl-tools" class="bulk" hidden>
-        <span class="muted">Korunan hesaplar toplu çıkarmadan hariç tutulur.</span>
-        <div class="row-actions">
-          <button id="wl-export" class="ghost small">Dışa aktar</button>
-          <button id="wl-import" class="ghost small">İçe aktar</button>
-          <button id="wl-paste" class="ghost small">Toplu ekle</button>
-          <input type="file" id="wl-file" accept=".json,application/json" hidden>
-        </div>
-      </div>
-
-      <ul id="list" class="list"></ul>
-      <p id="empty" class="empty" hidden>Gösterilecek kimse yok.</p>
-    </section>
-  </main>
-
-  <footer>
-    <p>Takip Analizi, Instagram veya Meta ile bağlantılı değildir. Veriler yalnızca bu tarayıcıda saklanır.</p>
-    <button id="wipe" class="link">Tüm verilerimi sil</button>
-  </footer>
-
-  <dialog id="dlg">
-    <p id="dlg-msg"></p>
-    <div class="dlg-actions">
-      <button id="dlg-no" class="ghost">Vazgeç</button>
-      <button id="dlg-yes" class="danger">Onayla</button>
-    </div>
-  </dialog>
-
-  <dialog id="dlg-paste">
-    <p>Korumak istediğin kullanıcı adlarını ya da profil bağlantılarını yapıştır (boşluk, virgül veya satır ile ayır).</p>
-    <textarea id="paste-text" rows="6" placeholder="ornek_kullanici, @baska.kisi, https://www.instagram.com/biri/"></textarea>
-    <div class="dlg-actions">
-      <button id="paste-no" class="ghost">Vazgeç</button>
-      <button id="paste-yes" class="primary">Ekle</button>
-    </div>
-  </dialog>
-
   <script src="shared.js"></script>
+  <script src="i18n.js"></script>
+  <script src="panel.js"></script>
   <script src="app.js"></script>
+  <script src="app-extension.js"></script>
 </body>
 </html>

@@ -23,6 +23,7 @@
 * { box-sizing: border-box; }
 [hidden] { display: none !important; }
 body { margin: 0; background: var(--bg); color: var(--text); font: 15px/1.5 -apple-system, "SF Pro Text", system-ui, sans-serif; }
+.top { display: flex; align-items: center; justify-content: space-between; }
 .top, main { max-width: 860px; margin: 0 auto; padding: 0 20px; }
 .top { padding-top: 32px; padding-bottom: 20px; }
 .brand { display: flex; align-items: center; gap: 14px; }
@@ -112,6 +113,7 @@ h2 { margin: 0 0 10px; font-size: 18px; }
 .sub-date { color: var(--muted); font-size: 12px; }
 .ghost.small { padding: 6px 10px; font-size: 12px; }
 
+footer a.link { text-decoration: underline; }
 footer { max-width: 860px; margin: 0 auto; padding: 0 20px 40px; text-align: center; color: var(--muted); font-size: 12px; }
 footer p { margin: 0 0 6px; }
 

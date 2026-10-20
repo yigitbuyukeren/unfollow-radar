@@ -17,7 +17,7 @@ function bump() {
 
 let timer;
 fs.watch(ROOT, { recursive: true }, (_evt, file) => {
-  if (!file || /^(\.git|dev|dist|scripts|store|node_modules)/.test(file) || /\.(md|zip)$/.test(file)) return;
+  if (!file || /^(\.git|dev|dist|scripts|store|console|console-src|node_modules)/.test(file) || /\.(md|zip)$/.test(file)) return;
   clearTimeout(timer);
   timer = setTimeout(bump, 150);
 });

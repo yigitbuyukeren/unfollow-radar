@@ -1,8 +1,9 @@
 {
-  "name": "insta-followertool",
+  "name": "unfollow-radar",
   "private": true,
   "scripts": {
     "dev": "node dev/server.js",
-    "build": "node scripts/build.js"
+    "build": "node scripts/build.js && node scripts/build-console.js",
+    "build:console": "node scripts/build-console.js"
   }
 }
