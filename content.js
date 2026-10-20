@@ -101,16 +101,27 @@ async function igPost(path) {
     credentials: "include",
     headers: {
       "x-ig-app-id": IG_APP_ID,
+      "x-asbd-id": "129477",
+      "x-ig-www-claim": sessionStorage.getItem("www-claim-v2") || "0",
+      "x-instagram-ajax": "1",
       "x-csrftoken": csrfToken(),
       "x-requested-with": "XMLHttpRequest",
       "content-type": "application/x-www-form-urlencoded",
     },
     body: "",
   });
+  const text = await res.text();
+  let data = {};
+  try {
+    data = JSON.parse(text);
+  } catch {}
   if (res.status === 429) throw new Error("Instagram istek sınırı (429). Biraz bekleyin.");
-  if (!res.ok) throw new Error(`İşlem başarısız: ${res.status}`);
-  const data = await res.json().catch(() => ({}));
-  if (data.status && data.status !== "ok") throw new Error("Instagram işlemi reddetti.");
+  if (!res.ok || (data.status && data.status !== "ok")) {
+    throw new Error(`İşlem başarısız (${res.status}): ${data.message || text.slice(0, 120)}`);
+  }
+  if (data.friendship_status && data.friendship_status.following === true && path.includes("/destroy/")) {
+    throw new Error("Instagram işlemi uygulamadı (hâlâ takip ediliyor).");
+  }
 }
 
 const ACTIONS = { unfollow: "destroy", removeFollower: "remove_follower" };
