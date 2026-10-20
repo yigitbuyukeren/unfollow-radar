@@ -1,5 +1,8 @@
 {
   "name": "insta-followertool",
   "private": true,
-  "scripts": { "dev": "node dev/server.js" }
+  "scripts": {
+    "dev": "node dev/server.js",
+    "build": "node scripts/build.js"
+  }
 }

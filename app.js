@@ -1,14 +1,10 @@
 const $ = (id) => document.getElementById(id);
-const TABS = {
-  notFollowingBack: { label: "Takipten çık" }, // yalnızca kendi hesabında, listede olan kişiler için
-  notFollowedBack: null,
-  mutual: null,
-};
-let result = null;
+const S = { state: null, queue: null, history: [], whitelist: [], scans: [], onboarded: false };
+const selected = new Set();
 let activeTab = "notFollowingBack";
 
-// Resimleri uzantı indirir (host izni sayesinde); yalnızca ekrana girenler yüklenir.
-const picCache = new Map(); // url -> object URL
+// ---------- profil resimleri: uzantı indirir (host izni sayesinde), yalnızca ekrana girenler ----------
+const picCache = new Map();
 const picObserver = new IntersectionObserver(
   (entries) => {
     for (const e of entries) {
@@ -48,8 +44,59 @@ function avatar(u) {
   return el;
 }
 
-function row(u) {
+// ---------- yardımcılar ----------
+const todayScansLeft = () => LIMITS.dailyScans - S.scans.filter(isToday).length;
+const todayUnfollows = () => S.history.filter((h) => isToday(h.ts)).length;
+const whitelistNames = () => new Set(S.whitelist.map((u) => u.username));
+const fmtDate = (ts) => new Date(ts).toLocaleString("tr-TR", { day: "2-digit", month: "short", hour: "2-digit", minute: "2-digit" });
+
+let localError = ""; // arayüzden kaynaklanan hata; tarama hatası state'ten gelir
+function showError() {
+  const err = S.state?.phase === "error" ? S.state.error : localError;
+  $("error").hidden = !err;
+  $("error").textContent = err || "";
+}
+function setError(text) {
+  localError = text || "";
+  showError();
+}
+
+function listFor(tab) {
+  const r = S.state?.result;
+  const wl = whitelistNames();
+  switch (tab) {
+    case "notFollowingBack": return (r?.notFollowingBack || []).filter((u) => !wl.has(u.username));
+    case "notFollowedBack": return r?.notFollowedBack || [];
+    case "mutual": return r?.mutual || [];
+    case "whitelist": return S.whitelist;
+    case "history": return S.history.slice().reverse();
+    default: return [];
+  }
+}
+
+// ---------- satır ----------
+function button(label, cls, onClick, disabled = false) {
+  const b = document.createElement("button");
+  b.className = cls;
+  b.textContent = label;
+  b.disabled = disabled;
+  b.addEventListener("click", () => onClick(b));
+  return b;
+}
+
+function row(u, queued) {
   const li = document.createElement("li");
+  if (activeTab === "notFollowingBack" && !queued.has(u.username)) {
+    const cb = document.createElement("input");
+    cb.type = "checkbox";
+    cb.checked = selected.has(u.username);
+    cb.addEventListener("change", () => {
+      cb.checked ? selected.add(u.username) : selected.delete(u.username);
+      renderBulk();
+    });
+    li.append(cb);
+  }
+
   const info = document.createElement("div");
   info.className = "who-info";
   const a = document.createElement("a");
@@ -70,100 +117,207 @@ function row(u) {
     l.textContent = "🔒";
     info.append(l);
   }
-  if (u.fullName) {
+  const sub = activeTab === "history" ? fmtDate(u.ts) : u.fullName;
+  if (sub) {
     const s = document.createElement("small");
-    s.textContent = u.fullName;
+    s.textContent = sub;
     info.append(s);
   }
   li.append(avatar(u), info);
 
-  const action = TABS[activeTab];
-  if (result.isSelf && u.pk && action) {
-    const btn = document.createElement("button");
-    btn.className = "act";
-    btn.textContent = action.label;
-    btn.addEventListener("click", () => unfollow(u, btn));
-    li.append(btn);
+  const actions = document.createElement("div");
+  actions.className = "row-actions";
+  if (activeTab === "notFollowingBack") {
+    actions.append(
+      button("Koru", "ghost small", () => protect(u)),
+      queued.has(u.username)
+        ? button("Sırada", "ghost small", () => {}, true)
+        : button("Çıkar", "act", () => enqueue([u.username]))
+    );
+  } else if (activeTab === "whitelist") {
+    actions.append(button("Korumayı kaldır", "ghost small", () => unprotect(u)));
+  } else if (activeTab === "history") {
+    actions.append(button("Geri takip et", "ghost small", (b) => refollow(u, b)));
   }
+  li.append(actions);
   return li;
 }
 
-function renderResult() {
-  const q = $("search").value.trim().toLowerCase();
-  const items = result[activeTab].filter((u) => !q || u.username.toLowerCase().includes(q) || (u.fullName || "").toLowerCase().includes(q));
-  $("list").replaceChildren(...items.map(row));
-  $("empty").hidden = items.length > 0;
-  $("list").hidden = items.length === 0;
-  document.querySelectorAll("#tabs button").forEach((b) => {
-    b.classList.toggle("active", b.dataset.tab === activeTab);
-    b.querySelector("i").textContent = result[b.dataset.tab].length;
-  });
-  $("s-followers").textContent = result.followerCount;
-  $("s-following").textContent = result.followingCount;
-  $("s-nfb").textContent = result.notFollowingBack.length;
-  $("s-mutual").textContent = result.mutual.length;
-}
+// ---------- çizim ----------
+function renderTop() {
+  $("onboarding").hidden = S.onboarded;
+  $("start").hidden = !S.onboarded;
+  if (!S.onboarded) return;
 
-function showResult(r) {
-  result = r;
-  $("who").innerHTML = "";
-  const b = document.createElement("b");
-  b.textContent = r.label;
-  $("who").append(b, " için sonuçlar");
-  $("results").hidden = false;
-  renderResult();
-}
-
-function setError(text) {
-  $("error").hidden = !text;
-  $("error").textContent = text || "";
-}
-
-function render(state) {
+  const state = S.state;
   const phase = state?.phase || "idle";
   const busy = phase === "running" || phase === "waiting";
-  $("run").disabled = busy;
+  const left = todayScansLeft();
+  $("quota").textContent = `Bugün ${Math.max(left, 0)}/${LIMITS.dailyScans} tarama hakkın kaldı`;
+  $("run").disabled = busy || left <= 0;
   $("banner").hidden = !busy;
   $("status").textContent = busy ? state.text || "Çalışıyor…" : "";
-  setError(phase === "error" ? state.error : "");
-  if (phase === "done") showResult(state.result);
+  showError();
 }
 
-async function unfollow(user, btn) {
+function renderQueue() {
+  const q = S.queue;
+  $("queue").hidden = !(q && q.total > 0);
+  if (!q || !q.total) return;
+  const finished = !q.items.length;
+  $("q-title").textContent = finished ? "Tamamlandı" : q.paused ? "Duraklatıldı" : "Takipten çıkarılıyor";
+  const secs = Math.max(0, Math.round((q.nextAt - Date.now()) / 1000));
+  $("q-sub").textContent = `${q.done}/${q.total}` + (!finished && !q.paused && secs ? ` · sonraki ${secs} sn` : "");
+  $("q-bar").style.width = `${Math.round(((q.done + q.failed.length) / q.total) * 100)}%`;
+  $("q-note").hidden = !q.note;
+  $("q-note").textContent = q.note || "";
+  $("q-fail").hidden = !q.failed.length;
+  $("q-fail").textContent = q.failed.length ? `${q.failed.length} kişi çıkarılamadı: ${q.failed.map((f) => `${f.username} (${f.error})`).join(", ")}` : "";
+  $("q-pause").hidden = finished;
+  $("q-pause").textContent = q.paused ? "Devam et" : "Durdur";
+  $("q-clear").textContent = finished ? "Kapat" : "İptal et";
+}
+
+function renderBulk() {
+  const show = activeTab === "notFollowingBack";
+  $("bulk").hidden = !show;
+  if (!show) return;
+  $("bulk-run").textContent = `Seçilenleri yavaşça çıkar (${selected.size})`;
+  $("bulk-run").disabled = selected.size === 0;
+}
+
+function renderResults() {
+  const r = S.state?.result;
+  const has = r || S.history.length || S.whitelist.length;
+  $("results").hidden = !has;
+  if (!has) return;
+
+  $("who").replaceChildren();
+  if (r) {
+    const b = document.createElement("b");
+    b.textContent = r.label;
+    $("who").append(b, ` için sonuçlar · ${fmtDate(r.ts)}`);
+  }
+  $("s-followers").textContent = r?.followerCount ?? 0;
+  $("s-following").textContent = r?.followingCount ?? 0;
+  $("s-nfb").textContent = listFor("notFollowingBack").length;
+  $("s-mutual").textContent = r?.mutual.length ?? 0;
+  document.querySelectorAll("#tabs button").forEach((b) => {
+    b.classList.toggle("active", b.dataset.tab === activeTab);
+    b.querySelector("i").textContent = listFor(b.dataset.tab).length;
+  });
+
+  const q = $("search").value.trim().toLowerCase();
+  const items = listFor(activeTab).filter((u) => !q || u.username.toLowerCase().includes(q) || (u.fullName || "").toLowerCase().includes(q));
+  const queued = new Set(S.queue?.items || []);
+  $("list").replaceChildren(...items.map((u) => row(u, queued)));
+  $("list").hidden = items.length === 0;
+  $("empty").hidden = items.length > 0;
+  renderBulk();
+}
+
+const render = () => {
+  renderTop();
+  renderQueue();
+  renderResults();
+};
+
+// ---------- işlemler ----------
+const send = (msg) => chrome.runtime.sendMessage(msg);
+
+async function enqueue(names) {
+  const left = LIMITS.dailyUnfollows - todayUnfollows();
+  if (names.length > 1) {
+    const minutes = Math.round((names.length * (LIMITS.gapMinMs + LIMITS.gapMaxMs)) / 2 / 60000);
+    let msg = `${names.length} kişi takipten çıkarılacak. Aralarında ${LIMITS.gapMinMs / 1000}–${LIMITS.gapMaxMs / 1000} sn beklenir (yaklaşık ${minutes} dk); tarayıcı açık kalmalı.`;
+    if (names.length > left) {
+      msg += `\n\nGünlük limit (${LIMITS.dailyUnfollows}) nedeniyle bugün yalnızca ${Math.max(left, 0)} kişi çıkarılır; kalanı için yarın "Devam et"e basman gerekir.`;
+    }
+    if (!confirm(msg)) return;
+  }
+  const res = await send({ type: "enqueue", usernames: names });
+  if (!res?.ok) return setError(res?.error || "Kuyruğa eklenemedi.");
+  names.forEach((n) => selected.delete(n));
+}
+
+const protect = (u) => {
+  selected.delete(u.username);
+  return chrome.storage.local.set({
+    whitelist: [...S.whitelist, { username: u.username, fullName: u.fullName, pic: u.pic, verified: u.verified, isPrivate: u.isPrivate }],
+  });
+};
+const unprotect = (u) => chrome.storage.local.set({ whitelist: S.whitelist.filter((w) => w.username !== u.username) });
+
+async function refollow(entry, btn) {
   btn.disabled = true;
-  btn.textContent = "Çıkarılıyor…";
+  btn.textContent = "…";
   setError("");
-  try {
-    const res = await chrome.runtime.sendMessage({ type: "unfollowUI", username: user.username });
-    if (!res?.ok) throw new Error(res?.error || "Bilinmeyen hata");
-    result.notFollowingBack = result.notFollowingBack.filter((x) => x.pk !== user.pk);
-    result.followingCount--;
-    await chrome.storage.local.set({ state: { phase: "done", result } });
-  } catch (e) {
+  const res = await send({ type: "follow", username: entry.username });
+  if (!res?.ok) {
     btn.disabled = false;
-    btn.textContent = TABS.notFollowingBack.label;
-    setError(e.message);
+    btn.textContent = "Geri takip et";
+    setError(res?.error || "Takip edilemedi.");
   }
 }
 
+// ---------- olaylar ----------
 document.querySelectorAll("#tabs button").forEach((b) =>
   b.addEventListener("click", () => {
     activeTab = b.dataset.tab;
-    renderResult();
+    renderResults();
   })
 );
-$("search").addEventListener("input", () => result && renderResult());
+$("search").addEventListener("input", renderResults);
+
+$("select-all").addEventListener("change", (e) => {
+  const queued = new Set(S.queue?.items || []);
+  const q = $("search").value.trim().toLowerCase();
+  listFor("notFollowingBack")
+    .filter((u) => !queued.has(u.username) && (!q || u.username.toLowerCase().includes(q)))
+    .forEach((u) => (e.target.checked ? selected.add(u.username) : selected.delete(u.username)));
+  renderResults();
+});
+$("bulk-run").addEventListener("click", () => enqueue([...selected]));
 
 $("run").addEventListener("click", async () => {
   setError("");
   $("run").disabled = true;
-  const res = await chrome.runtime.sendMessage({ type: "startCompare", username: $("username").value });
+  const res = await send({ type: "startCompare" });
   if (!res?.ok) {
     setError(res?.error || "Başlatılamadı.");
-    $("run").disabled = false;
+    renderTop();
   }
 });
-$("username").addEventListener("keydown", (e) => e.key === "Enter" && $("run").click());
 
-chrome.storage.local.get("state").then(({ state }) => render(state));
-chrome.storage.onChanged.addListener((changes) => changes.state && render(changes.state.newValue));
+$("ack").addEventListener("click", () => chrome.storage.local.set({ onboarded: true }));
+$("q-pause").addEventListener("click", () => send({ type: "queueControl", op: S.queue?.paused ? "resume" : "pause" }));
+$("q-clear").addEventListener("click", () => send({ type: "queueControl", op: "clear" }));
+$("wipe").addEventListener("click", async () => {
+  if (!confirm("Tarama sonuçları, korunanlar, geçmiş ve ayarlar dahil tüm verilerin bu tarayıcıdan silinecek. Emin misin?")) return;
+  await send({ type: "queueControl", op: "clear" });
+  await chrome.storage.local.clear();
+  location.reload();
+});
+
+// ---------- veri ----------
+const KEYS = ["state", "queue", "history", "whitelist", "scans", "onboarded"];
+function apply(values) {
+  if ("state" in values) S.state = values.state || null;
+  if ("queue" in values) S.queue = values.queue || null;
+  if ("history" in values) S.history = values.history || [];
+  if ("whitelist" in values) S.whitelist = values.whitelist || [];
+  if ("scans" in values) S.scans = values.scans || [];
+  if ("onboarded" in values) S.onboarded = !!values.onboarded;
+}
+
+chrome.storage.local.get(KEYS).then((v) => {
+  apply(v);
+  render();
+});
+chrome.storage.onChanged.addListener((changes) => {
+  const v = {};
+  for (const k of KEYS) if (k in changes) v[k] = changes[k].newValue;
+  apply(v);
+  render();
+});
+setInterval(renderQueue, 1000); // geri sayım

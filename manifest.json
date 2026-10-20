@@ -1,21 +1,34 @@
 {
   "manifest_version": 3,
-  "name": "Insta Follower Tool",
-  "version": "0.1.0",
-  "description": "Açık profilin takip ettikleri ile takipçilerini karşılaştırır.",
+  "name": "Takip Analizi",
+  "version": "1.0.0",
+  "description": "Instagram'da seni geri takip etmeyenleri bul, yavaş ve güvenli şekilde yönet. Veriler yalnızca cihazında kalır.",
+  "minimum_chrome_version": "110",
+  "icons": {
+    "16": "icons/icon16.png",
+    "32": "icons/icon32.png",
+    "48": "icons/icon48.png",
+    "128": "icons/icon128.png"
+  },
   "permissions": [
-    "activeTab",
-    "alarms",
-    "storage"
+    "storage",
+    "alarms"
   ],
   "host_permissions": [
     "https://www.instagram.com/*",
-    "http://127.0.0.1:8765/*",
     "https://*.cdninstagram.com/*",
-    "https://*.fbcdn.net/*"
+    "https://*.fbcdn.net/*",
+    "http://127.0.0.1:8765/*"
   ],
   "action": {
-    "default_title": "Takip Analizi"
+    "default_title": "Takip Analizi",
+    "default_icon": {
+      "16": "icons/icon16.png",
+      "32": "icons/icon32.png"
+    }
+  },
+  "background": {
+    "service_worker": "background.js"
   },
   "content_scripts": [
     {
@@ -26,8 +39,5 @@
         "content.js"
       ]
     }
-  ],
-  "background": {
-    "service_worker": "background.js"
-  }
+  ]
 }

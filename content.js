@@ -16,7 +16,11 @@ async function igGet(path) {
   if (res.status === 429) throw new RateLimitError("Instagram istek sınırı (429).");
   if (res.status === 401 || res.status === 403) throw new Error("Instagram'a giriş yapmış olmalısınız.");
   if (!res.ok) throw new Error(`İstek başarısız: ${res.status}`);
-  return res.json();
+  try {
+    return await res.json();
+  } catch {
+    throw new Error("Instagram beklenmeyen bir yanıt verdi (arayüz değişmiş olabilir).");
+  }
 }
 
 async function withBackoff(fn, label) {
@@ -33,43 +37,23 @@ async function withBackoff(fn, label) {
   }
 }
 
-function currentUsername() {
-  const first = location.pathname.split("/").filter(Boolean)[0];
-  const reserved = ["explore", "reels", "direct", "accounts", "p", "stories", "reel", "tv"];
-  return first && !reserved.includes(first) ? first : null;
-}
-
-async function resolveUser(username) {
-  const lookup = () => igGet(`/api/v1/users/web_profile_info/?username=${encodeURIComponent(username)}`).then((i) => i?.data?.user);
-  try {
-    const user = await lookup();
-    if (!user) throw new Error("Profil bulunamadı.");
-    return user;
-  } catch (e) {
-    if (!(e instanceof RateLimitError)) throw e;
-    // Ek istek atmadan sayfadaki gömülü veriden kullanıcı id'sini dene.
-    const m = document.documentElement.innerHTML.match(/"profilePage_(\d+)"/);
-    if (m) return { id: m[1] };
-    const user = await withBackoff(lookup, "profil");
-    if (!user) throw new Error("Profil bulunamadı.");
-    return user;
-  }
-}
-
 async function fetchAll(userId, kind, label) {
   const users = new Map();
   let maxId = "";
   do {
     const q = `count=${PAGE_SIZE}${maxId ? `&max_id=${encodeURIComponent(maxId)}` : ""}`;
     const data = await withBackoff(() => igGet(`/api/v1/friendships/${userId}/${kind}/?${q}`), label);
-    for (const u of data.users || []) users.set(u.pk || u.id, {
-      pk: String(u.pk || u.id),
-      username: u.username,
-      fullName: u.full_name,
-      pic: u.profile_pic_url,
-      verified: !!u.is_verified,
-      isPrivate: !!u.is_private,
-    });
+    if (!Array.isArray(data.users)) throw new Error("Instagram yanıtı beklenenden farklı (arayüz değişmiş olabilir).");
+    for (const u of data.users) {
+      users.set(u.pk || u.id, {
+        pk: String(u.pk || u.id),
+        username: u.username,
+        fullName: u.full_name,
+        pic: u.profile_pic_url,
+        verified: !!u.is_verified,
+        isPrivate: !!u.is_private,
+      });
+    }
     maxId = data.next_max_id || "";
     await setState({ phase: "running", text: `${label} alınıyor… ${users.size}` });
     if (maxId) await sleep(2000 + Math.random() * 2000);
@@ -77,21 +61,25 @@ async function fetchAll(userId, kind, label) {
   return [...users.values()];
 }
 
+// Giriş yapmış hesabın kimliği (oturum çerezinden).
+const selfId = () => document.cookie.match(/(?:^|; )ds_user_id=(\d+)/)?.[1];
+
 async function compare() {
-  const username = currentUsername();
-  if (!username) throw new Error("Önce bir Instagram profil sayfası açın.");
-  await setState({ phase: "running", text: "Profil bilgisi alınıyor…" });
+  const uid = selfId();
+  if (!uid) throw new Error("Instagram'a giriş yapmış olmalısınız.");
+  await setState({ phase: "running", text: "Hesap bilgisi alınıyor…" });
+  const info = await withBackoff(() => igGet(`/api/v1/users/${uid}/info/`), "hesap");
+  const username = info?.user?.username;
+  if (!username) throw new Error("Hesap bilgisi alınamadı (arayüz değişmiş olabilir).");
 
-  const user = await resolveUser(username);
-  if (user.is_private && !user.followed_by_viewer && !user.is_self) throw new Error("Bu profil gizli ve takip etmiyorsunuz.");
-
-  const followers = await fetchAll(user.id, "followers", "Takipçiler");
-  const following = await fetchAll(user.id, "following", "Takip edilenler");
+  const followers = await fetchAll(uid, "followers", "Takipçiler");
+  const following = await fetchAll(uid, "following", "Takip edilenler");
   const followerNames = new Set(followers.map((u) => u.username));
   const followingNames = new Set(following.map((u) => u.username));
   return {
     label: `@${username}`,
-    isSelf: document.cookie.includes(`ds_user_id=${user.id}`),
+    username,
+    ts: Date.now(),
     followerCount: followers.length,
     followingCount: following.length,
     notFollowingBack: following.filter((u) => !followerNames.has(u.username)),
@@ -126,7 +114,7 @@ chrome.storage.local.get("state").then(({ state }) => {
   if (state && (state.phase === "running" || state.phase === "waiting")) setState({ phase: "idle" });
 });
 
-// --- Takipten çıkar: arka planda açılan profil sekmesinde Instagram arayüzünü kullanır ---
+// --- Takip / takipten çık: arka planda açılan profil sekmesinde Instagram arayüzünü kullanır ---
 const textOf = (el) => (el.textContent || "").trim();
 const findButton = (re) => [...document.querySelectorAll("button, [role=button]")].find((el) => re.test(textOf(el)));
 
@@ -140,25 +128,32 @@ async function waitFor(fn, ms = 8000) {
   return null;
 }
 
-async function unfollowViaUi() {
+async function uiAction(kind) {
   const FOLLOWING = /^(Takiptesin|Takip ediliyor|Following|Requested|İstek gönderildi)/i;
   const UNFOLLOW = /^(Takibi bırak|Unfollow)$/i;
   const FOLLOW = /^(Takip et|Follow)$/i;
   try {
-    const btn = await waitFor(() => findButton(FOLLOWING));
-    if (!btn) throw new Error("Takip düğmesi bulunamadı (zaten takip etmiyor olabilirsiniz).");
-    btn.click();
-    const item = await waitFor(() => findButton(UNFOLLOW));
-    if (!item) throw new Error("'Takibi bırak' seçeneği bulunamadı.");
-    item.click();
-    await sleep(1200);
-    const confirm = findButton(UNFOLLOW); // bazı hesaplarda onay penceresi çıkar
-    if (confirm) confirm.click();
-    if (!(await waitFor(() => findButton(FOLLOW)))) throw new Error("Takipten çıkma doğrulanamadı.");
-    chrome.runtime.sendMessage({ type: "unfollowResult", ok: true });
+    if (kind === "unfollow") {
+      const btn = await waitFor(() => findButton(FOLLOWING));
+      if (!btn) throw new Error("Takip düğmesi bulunamadı (zaten takip etmiyor olabilirsiniz).");
+      btn.click();
+      const item = await waitFor(() => findButton(UNFOLLOW));
+      if (!item) throw new Error("'Takibi bırak' seçeneği bulunamadı.");
+      item.click();
+      await sleep(1200);
+      findButton(UNFOLLOW)?.click(); // bazı hesaplarda onay penceresi çıkar
+      if (!(await waitFor(() => findButton(FOLLOW)))) throw new Error("Takipten çıkma doğrulanamadı.");
+    } else {
+      const btn = await waitFor(() => findButton(FOLLOW));
+      if (!btn) throw new Error("'Takip et' düğmesi bulunamadı (zaten takip ediyor olabilirsiniz).");
+      btn.click();
+      if (!(await waitFor(() => findButton(FOLLOWING)))) throw new Error("Takip etme doğrulanamadı.");
+    }
+    chrome.runtime.sendMessage({ type: "uiActionResult", ok: true });
   } catch (e) {
-    chrome.runtime.sendMessage({ type: "unfollowResult", ok: false, error: e.message });
+    chrome.runtime.sendMessage({ type: "uiActionResult", ok: false, error: e.message });
   }
 }
 
-if (location.hash === "#ift-unfollow") unfollowViaUi();
+if (location.hash === "#ift-unfollow") uiAction("unfollow");
+else if (location.hash === "#ift-follow") uiAction("follow");

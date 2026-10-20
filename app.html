@@ -12,25 +12,48 @@
       <span class="logo" aria-hidden="true"></span>
       <div>
         <h1>Takip Analizi</h1>
-        <p>Takipçi ve takip ettiklerini karşılaştır</p>
+        <p>Seni geri takip etmeyenleri bul, güvenle yönet</p>
       </div>
     </div>
   </header>
 
   <main>
-    <section class="card start">
+    <section id="onboarding" class="card" hidden>
+      <h2>Başlamadan önce</h2>
+      <ul class="points">
+        <li><b>Verilerin sende kalır.</b> Hiçbir şey sunucuya gönderilmez; her şey bu tarayıcıda saklanır.</li>
+        <li><b>Sadece kendi hesabın.</b> Instagram'da hangi hesapla giriş yaptıysan o taranır.</li>
+        <li><b>Günde en fazla 3 tarama.</b> Instagram'ı yormamak ve hesabını korumak için.</li>
+        <li><b>Takipten çıkarma yavaştır.</b> Kişiler arasında 45–120 saniye beklenir ve günde en fazla 30 kişi çıkarılır.</li>
+        <li><b>Risk:</b> Bu araç Instagram ile bağlantılı değildir. Otomasyon, Instagram'ın kullanım şartlarına aykırı sayılabilir ve nadiren de olsa hesap kısıtlamasına yol açabilir. Sorumluluk sana aittir.</li>
+      </ul>
+      <button id="ack" class="primary wide">Anladım, başla</button>
+    </section>
+
+    <section id="start" class="card start" hidden>
       <div class="row">
-        <label class="field">
-          <span class="at">@</span>
-          <input id="username" type="text" placeholder="kullanıcı adı veya profil bağlantısı (boşsa açık profil sekmesi)" autocomplete="off" spellcheck="false">
-        </label>
-        <button id="run" class="primary">Karşılaştır</button>
+        <div class="who-me">
+          <b>Instagram hesabını tara</b>
+          <span id="quota"></span>
+        </div>
+        <button id="run" class="primary">Hesabımı tara</button>
       </div>
       <div id="banner" class="banner" hidden>
         <div class="spinner" aria-hidden="true"></div>
         <span id="status"></span>
       </div>
       <p id="error" class="error" hidden></p>
+    </section>
+
+    <section id="queue" class="card queue" hidden>
+      <div class="q-head"><b id="q-title"></b><span id="q-sub"></span></div>
+      <div class="progress"><div id="q-bar"></div></div>
+      <p id="q-note" class="hint" hidden></p>
+      <p id="q-fail" class="error" hidden></p>
+      <div class="q-actions">
+        <button id="q-pause" class="ghost"></button>
+        <button id="q-clear" class="ghost"></button>
+      </div>
     </section>
 
     <section id="results" hidden>
@@ -47,14 +70,28 @@
           <button data-tab="notFollowingBack" class="active" role="tab">Geri takip etmeyenler <i></i></button>
           <button data-tab="notFollowedBack" role="tab">Takip etmediklerim <i></i></button>
           <button data-tab="mutual" role="tab">Karşılıklı <i></i></button>
+          <button data-tab="whitelist" role="tab">Korunanlar <i></i></button>
+          <button data-tab="history" role="tab">Çıkarılanlar <i></i></button>
         </div>
         <input id="search" type="search" placeholder="Ara…" autocomplete="off">
+      </div>
+
+      <div id="bulk" class="bulk" hidden>
+        <label class="check"><input type="checkbox" id="select-all"> Tümünü seç</label>
+        <button id="bulk-run" class="danger" disabled>Seçilenleri yavaşça çıkar (0)</button>
       </div>
 
       <ul id="list" class="list"></ul>
       <p id="empty" class="empty" hidden>Gösterilecek kimse yok.</p>
     </section>
   </main>
+
+  <footer>
+    <p>Takip Analizi, Instagram veya Meta ile bağlantılı değildir. Veriler yalnızca bu tarayıcıda saklanır.</p>
+    <button id="wipe" class="link">Tüm verilerimi sil</button>
+  </footer>
+
+  <script src="shared.js"></script>
   <script src="app.js"></script>
 </body>
 </html>

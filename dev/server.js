@@ -17,7 +17,7 @@ function bump() {
 
 let timer;
 fs.watch(ROOT, { recursive: true }, (_evt, file) => {
-  if (!file || file.startsWith(".git") || file.startsWith("dev") || file.includes("node_modules")) return;
+  if (!file || /^(\.git|dev|dist|scripts|store|node_modules)/.test(file) || /\.(md|zip)$/.test(file)) return;
   clearTimeout(timer);
   timer = setTimeout(bump, 150);
 });
