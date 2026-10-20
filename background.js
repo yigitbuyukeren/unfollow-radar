@@ -61,8 +61,15 @@ chrome.action.onClicked.addListener(async () => {
 const RESERVED = ["explore", "reels", "direct", "accounts", "p", "stories", "reel", "tv"];
 const sleepMs = (ms) => new Promise((r) => setTimeout(r, ms));
 
+// "@kullanici", "kullanici" ya da profil bağlantısı (instagram.com/kullanici/?igsh=...) kabul edilir.
+function parseUsername(raw) {
+  const text = (raw || "").trim();
+  const link = text.match(/instagram\.com\/([A-Za-z0-9._]+)/i);
+  return (link ? link[1] : text).replace(/^@/, "");
+}
+
 async function startCompare(rawName) {
-  const username = (rawName || "").trim().replace(/^@/, "");
+  const username = parseUsername(rawName);
   let tab;
   if (username) {
     if (!/^[A-Za-z0-9._]{1,30}$/.test(username)) throw new Error("Geçersiz kullanıcı adı.");
