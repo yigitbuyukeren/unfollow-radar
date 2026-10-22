@@ -1,18 +1,20 @@
+<a href="https://github.com/yigitbuyukeren/unfollow-radar#-nasıl-kullanılır">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/banner-dark.jpg">
+    <img src="docs/banner-light.jpg" width="100%" alt="Unfollow Radar: Instagram'da seni geri takip etmeyenleri bul. Konsola yapıştır, kurulum yok, veriler yüzde yüz yerel, MIT lisanslı.">
+  </picture>
+</a>
+
 <div align="center">
 
-<img src="icons/icon128.png" width="88" alt="Unfollow Radar">
+**[🚀 Nasıl kullanılır](#-nasıl-kullanılır)** &nbsp;·&nbsp; **[📋 Kodu kopyala](unfollow-radar.js)** &nbsp;·&nbsp; **[🐞 Sorun bildir](https://github.com/yigitbuyukeren/unfollow-radar/issues)**
 
-# 📡 Unfollow Radar
-
-**Instagram'da seni geri takip etmeyenleri bul.**<br>
-**Find who doesn't follow you back on Instagram.**
-
-[![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)](LICENSE)
-![No install](https://img.shields.io/badge/install-none-brightgreen)
-![100% local](https://img.shields.io/badge/data-100%25%20local-success)
-![JavaScript](https://img.shields.io/badge/made%20with-JavaScript-f7df1e)
-[![PRs welcome](https://img.shields.io/badge/PRs-welcome-ff69b4.svg)](https://github.com/yigitbuyukeren/unfollow-radar/pulls)
-![Open source](https://img.shields.io/badge/open-source-orange)
+[![Lisans: MIT](https://img.shields.io/badge/lisans-MIT-E8480C?style=flat-square&labelColor=16150F)](LICENSE)
+![Kurulum yok](https://img.shields.io/badge/kurulum-yok-E8480C?style=flat-square&labelColor=16150F)
+![Veri](https://img.shields.io/badge/veri-%25100%20yerel-E8480C?style=flat-square&labelColor=16150F)
+![JavaScript](https://img.shields.io/badge/JavaScript-tek%20dosya-E8480C?style=flat-square&labelColor=16150F&logo=javascript&logoColor=F7DF1E)
+[![Son güncelleme](https://img.shields.io/github/last-commit/yigitbuyukeren/unfollow-radar?style=flat-square&labelColor=16150F&color=E8480C&label=son%20g%C3%BCncelleme)](https://github.com/yigitbuyukeren/unfollow-radar/commits/main)
+[![PR'lar açık](https://img.shields.io/badge/PR-a%C3%A7%C4%B1k-E8480C?style=flat-square&labelColor=16150F)](https://github.com/yigitbuyukeren/unfollow-radar/pulls)
 
 🇹🇷 [Türkçe](#-türkçe) &nbsp;·&nbsp; 🇬🇧 [English](#-english)
 
@@ -23,6 +25,10 @@
 
 
 Tek bir dosyayı tarayıcı konsoluna yapıştır, hepsi bu. **Kurulum yok, hesap yok, sunucu yok.**
+
+| 📋 **Yapıştır, çalıştır** | 🔒 **%100 yerel** | 🐢 **Yavaş ve güvenli** | ⛔ **Otomatik fren** |
+|:---:|:---:|:---:|:---:|
+| Kurulum, hesap ve sunucu yok | Veri tarayıcıdan hiç çıkmaz | Kişi başı 4–4,8 sn bekleme | Instagram engel koyunca kuyruk durur |
 
 ### 🚀 Nasıl kullanılır
 1. 🌐 [instagram.com](https://www.instagram.com)'u aç ve giriş yap.
@@ -100,6 +106,10 @@ Bu proje **açık kaynaktır** ve **[MIT lisansı](LICENSE)** ile yayınlanır: 
 
 
 Paste one file into your browser console and you're done. **No install, no account, no server.**
+
+| 📋 **Paste and run** | 🔒 **100% local** | 🐢 **Slow and safe** | ⛔ **Auto brake** |
+|:---:|:---:|:---:|:---:|
+| No install, account or server | Data never leaves your browser | 4–4.8 s wait per person | The queue stops if Instagram pushes back |
 
 ### 🚀 How to use
 1. 🌐 Open [instagram.com](https://www.instagram.com) and sign in.
