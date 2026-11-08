@@ -17,7 +17,33 @@ const header = `/*!
  * https://github.com/yigitbuyukeren/unfollow-radar
  */
 `;
-const body = parts.map((p) => `// ---- ${p} ----\n${read(p)}`).join("\n").replace("__BUILD_ID__", `${pkg.version}-${Date.now()}`);
+const outputPath = path.join(root, "unfollow-radar.js");
+const check = process.argv.slice(2).includes("--check");
+let buildId = `${pkg.version}-${Date.now()}`;
+if (check) {
+  let existing;
+  try { existing = fs.readFileSync(outputPath, "utf8"); }
+  catch (err) {
+    if (err.code !== "ENOENT") throw err;
+    console.error("unfollow-radar.js bulunamadı; npm run build çalıştırın.");
+    process.exit(1);
+  }
+  const match = existing.match(/^const BUILD = "([^"\n]+)"; \/\/ build betiği doldurur$/m);
+  if (!match || !match[1].startsWith(`${pkg.version}-`) || !/^\d+$/.test(match[1].slice(pkg.version.length + 1))) {
+    console.error("Geçersiz derleme kimliği; npm run build çalıştırın.");
+    process.exit(1);
+  }
+  buildId = match[1];
+}
+const body = parts.map((p) => `// ---- ${p} ----\n${read(p)}`).join("\n").replace("__BUILD_ID__", buildId);
 const out = `${header}(() => {\nconst APP_CSS = ${JSON.stringify(css)};\nconst LOGO = ${JSON.stringify(logo)};\n${body}\n})();\n`;
-fs.writeFileSync(path.join(root, "unfollow-radar.js"), out);
+if (check) {
+  if (fs.readFileSync(outputPath, "utf8") !== out) {
+    console.error("unfollow-radar.js güncel değil; npm run build çalıştırın.");
+    process.exit(1);
+  }
+  console.log("unfollow-radar.js güncel.");
+  process.exit(0);
+}
+fs.writeFileSync(outputPath, out);
 console.log(`unfollow-radar.js (${(out.length / 1024).toFixed(0)} KB)`);
