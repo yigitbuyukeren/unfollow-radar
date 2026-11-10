@@ -95,6 +95,8 @@ Hiçbir yere. Sonuçlar, korunanlar ve geçmiş sayfanın `localStorage` alanın
 Instagram ile bağlantılı değildir. Otomasyon Instagram'ın kullanım şartlarına aykırı olabilir ve hesabın kısıtlanmasına yol açabilir. **Sorumluluk sana aittir.** Yalnızca okuyup güvendiğin kodu yapıştır — kaynaklar [`src/`](src) içinde.
 
 ### 📜 Açık kaynak ve lisans
+Geliştirme: [`src/`](src) kaynaklarını değiştir; `unfollow-radar.js` üretilmiş dosyadır, elle düzenleme. Kaynak değişikliğinden sonra `npm run build` ile yeniden üret ve farkı incele.
+
 Bu proje **açık kaynaktır** ve **[MIT lisansı](LICENSE)** ile yayınlanır: kullanabilir, değiştirebilir, dağıtabilir ve ticari işte bile kullanabilirsin. Tek şart, lisans ve telif notunu korumaktır. Yazılım "olduğu gibi" sunulur, garanti verilmez.
 
 🤝 Katkılar memnuniyetle karşılanır: hata bildir, fikir öner ya da pull request aç. ⭐ Beğendiysen yıldız vermeyi unutma!
@@ -176,6 +178,8 @@ Nowhere. Results, protected accounts and history stay in the page's `localStorag
 Not affiliated with Instagram. Automation may violate Instagram's terms and can get your account restricted. **Use at your own risk.** Only paste code you have read and trust — the sources are in [`src/`](src).
 
 ### 📜 Open source & license
+Development: edit the sources in [`src/`](src); `unfollow-radar.js` is generated and must not be edited by hand. After source changes, regenerate it with `npm run build` and review the diff.
+
 This project is **open source**, released under the **[MIT License](LICENSE)**: you may use, modify, distribute and even use it commercially. The only condition is keeping the license and copyright notice. The software is provided "as is", without warranty.
 
 🤝 Contributions are welcome: report bugs, suggest ideas or open a pull request. ⭐ If you like it, give it a star!
